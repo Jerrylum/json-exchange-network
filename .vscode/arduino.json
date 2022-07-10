@@ -1,0 +1,6 @@
+{
+    "port": "/dev/ttyACM0",
+    "board": "arduino:sam:arduino_due_x_dbg",
+    "sketch": "arduino_jen/arduino_jen.ino",
+    "output": "build/arduino_jen"
+}
