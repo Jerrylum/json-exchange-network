@@ -6,7 +6,9 @@ from lib import japi
 import globals as gb
 
 
-def run():
+def run(share):
+    gb.share = share
+
     print("Joystick worker started")
 
     gb.write('joystick.main', {'available': False, 'update': 0, 'axes': {}, 'btns': {}})

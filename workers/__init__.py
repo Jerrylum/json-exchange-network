@@ -2,7 +2,7 @@
 
 import os
 for module in os.listdir(os.path.dirname(__file__)):
-    if module == '__init__.py' or module[-3:] != '.py':
+    if module == '__init__.py' or module[-3:] != '.py' or module.startswith('_'):
         continue
     __import__(__name__ + '.' + module[:-3], locals(), globals())
 del module

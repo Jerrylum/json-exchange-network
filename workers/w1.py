@@ -6,7 +6,8 @@ from core.opcontrol import *
 import globals as gb
 
 
-def run():
+def run(share):
+    gb.share = share
 
     g = False
     while True:

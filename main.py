@@ -29,7 +29,7 @@ if __name__ == '__main__':
         for name in workers.__dict__:
             worker = workers.__dict__[name]
             if type(worker) is ModuleType and 'run' in worker.__dict__:
-                p = Process(target=worker.run)
+                p = Process(target=worker.run, args=(gb.share,))
                 p.start()
                 processes[name] = p
 
