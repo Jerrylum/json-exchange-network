@@ -7,6 +7,7 @@ import globals as gb
 
 manager = SerialConnectionManager()
 
+
 def run(share):
     gb.share = share
 

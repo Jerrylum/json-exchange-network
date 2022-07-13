@@ -1,30 +1,33 @@
+"""
+DO NOT AUTO-FORMAT THIS FILE
+DO NOT AUTO-FORMAT THIS FILE
+DO NOT AUTO-FORMAT THIS FILE
+"""
+
 import sys
-sys.path.insert(1, './') # run the script on project root dirt
+sys.path.insert(1, './') # XXX: to be able to import modules on project directory; this should be before other imports
 
 import os
 import time
 from multiprocessing import Manager, Process
 from types import ModuleType
-from typing import Dict
 
 import globals as gb
 import workers
 
-def clearupAllPythonProcess():
-    # kill but without yourself
-    os.system('sudo kill $(pgrep -f "python3 main.py" | grep -v ' + str(os.getpid()) + ') &> /dev/null')
 
 if __name__ == '__main__':
-    # kill all process that start before it
-    # clearupAllPythonProcess() # optional
+    # optional, kill all process that start before it
+    # os.system('sudo kill $(pgrep -f "python3 main.py" | grep -v ' + str(os.getpid()) + ') &> /dev/null')
 
+    # to allow tk window to be shown when the command is executed from terminal
     if 'DISPLAY' not in os.environ:
         os.environ['DISPLAY'] = ':0'
 
     try:
-        gb.init(Manager(), ['joystick', 'process', 'robot', 'serial'])
+        gb.init(Manager(), ['opcontrol', 'process', 'robot', 'serial'])
 
-        processes: Dict[str, Process] = {}
+        processes: dict[str, Process] = {}
 
         for name in workers.__dict__:
             worker = workers.__dict__[name]

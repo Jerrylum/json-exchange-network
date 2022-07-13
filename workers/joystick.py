@@ -11,7 +11,7 @@ def run(share):
 
     print("Joystick worker started")
 
-    gb.write('joystick.main', {'available': False, 'update': 0, 'axes': {}, 'btns': {}})
+    gb.write('opcontrol.joystick', {'available': False, 'update': 0, 'axes': {}, 'btns': {}})
 
     while True:
         paths = japi.getAvailableJoysticks()
@@ -34,7 +34,7 @@ def run(share):
             while True:
                 joystick.read()  # ignore returned result
 
-                gb.write('joystick.main', {
+                gb.write('opcontrol.joystick', {
                     'available': True,
                     'update': time.time(),
                     'axes': joystick.axis_states,
@@ -46,4 +46,4 @@ def run(share):
             if joystick is not None:
                 joystick.close()
 
-            gb.write('joystick.available', False)
+            gb.write('opcontrol.joystick.available', False)

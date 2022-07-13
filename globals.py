@@ -1,4 +1,5 @@
-from multiprocessing.managers import SyncManager
+from multiprocessing.managers import SyncManager, process
+from multiprocessing.process import current_process
 from typing import List
 
 share = None
@@ -12,6 +13,8 @@ def init(manager: SyncManager, rootChannels: List[str]):
         share[channel] = manager.dict()
 
     share['__diff__'] = manager.list()
+
+    print('Share network initialized. ', manager.address, current_process().authkey)
 
 
 def read(path: str):

@@ -6,15 +6,20 @@
 // ASCII only
 // never start with an underscore
 
-// joystick
+// opcontrol
 {
-    "main": {
+    "joystick": {
         "available": true,
         "update": 1656566710.9527078,
         "axes": {
             ...
         },
         "btns": {
+            ...
+        }
+    },
+    "keyboard": {
+        "keys": { // https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/key-names.html
             ...
         }
     }
