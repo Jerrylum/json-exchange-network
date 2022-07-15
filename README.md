@@ -75,10 +75,11 @@
     "Platform": false
 }
 
-// serial
+// device
 {
-    "ttyACM0": {
+    "/dev/ttyACM0": {
         "available": true,
+        "type": "serial",
         "watch": [
             "robot.shooterx.target_pos"
         ]

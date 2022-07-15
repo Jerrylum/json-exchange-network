@@ -25,7 +25,7 @@ if __name__ == '__main__':
         os.environ['DISPLAY'] = ':0'
 
     try:
-        gb.init(Manager(), ['opcontrol', 'process', 'robot', 'serial'])
+        gb.init(Manager(), ['device', 'opcontrol', 'process', 'robot'])
 
         processes: dict[str, Process] = {}
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
         gb.write('process.main.pid', os.getpid())
         while True:
-            gb.write('process.main.update', time.time())
+            gb.write('process.main.update', time.perf_counter())
             gb.write('process.subprocess', {
                 name: {
                     'is_alive': processes[name].is_alive(),

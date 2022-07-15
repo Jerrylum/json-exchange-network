@@ -14,18 +14,18 @@ def run(share):
     attention = {}
 
     def onKeyPress(event):
-        if event.keysym in attention and time.time() - attention[event.keysym] < 0.01:
+        if event.keysym in attention and time.perf_counter() - attention[event.keysym] < 0.01:
             del attention[event.keysym]
             return
         else:
             gb.write('opcontrol.keyboard.keys.' + str(event.keysym), True)
 
     def onKeyRelease(event):
-        attention[event.keysym] = time.time()
+        attention[event.keysym] = time.perf_counter()
 
     def keyDebouncing():
         for key in list(attention.keys()):
-            if time.time() - attention[key] > 0.01:
+            if time.perf_counter() - attention[key] > 0.01:
                 del attention[key]
                 gb.write('opcontrol.keyboard.keys.' + str(key), False)
 

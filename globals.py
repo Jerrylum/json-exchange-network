@@ -87,8 +87,8 @@ def write(path: str, val: any, remote_update=False):
 
     doRobot(share[nodes[0]], nodes[1:])
 
-    if remote_update:
-        pass
-    else:
-        if old_val != read(path) and not path.startswith('_') and '._' not in path:
-            share['__diff__'].append(path)
+    # if remote_update:
+    #     pass
+    # else:
+    if old_val != read(path) and not path.startswith('_') and '._' not in path:
+        share['__diff__'].append(path)

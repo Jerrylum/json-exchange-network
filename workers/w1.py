@@ -6,43 +6,68 @@ from core.opcontrol import *
 import globals as gb
 
 
+class Clock:
+    def __init__(self, frequency: int, busyWait = False, offset = 0.00015):
+        self.period = 1 / frequency
+        self.last_time = time.perf_counter()
+        self.busyWait = busyWait
+        self.offset = offset
+        self.sleep = self.period - self.offset
+
+        if busyWait:
+            self.spin = self._spin_bw
+
+    def spin(self):
+        time.sleep(max(0, self.sleep - (time.perf_counter() - self.last_time)))
+        self.last_time = time.perf_counter()
+
+    def _spin_bw(self):
+        time.sleep(max(0, self.sleep - (time.perf_counter() - self.last_time)))
+
+        while time.perf_counter() - self.last_time < self.period:
+            pass
+
+        self.last_time = time.perf_counter()
+
+
 def run(share):
     gb.share = share
 
     time.sleep(1)
 
+    c = Clock(frequency = 100)
+
     g = False
     while True:
-        # time.sleep(0.01)
+        c.spin()
 
         g = not g
 
         # gb.write('robot.platform', g)
         # gb.write('robot.run', str(g))
 
-        time.sleep(0.01)
-        # print("{} {} {} {} {}".format(
-        #     isBtnPressing(RIGHT_U),
-        #     isBtnJustPressed(RIGHT_U),
-        #     isBtnJustReleased(RIGHT_U),
-        #     getBtnDuration(RIGHT_U),
-        #     getBtnCombo(RIGHT_U)
-        # ))
+        print("{} {} {} {} {}".format(
+            isBtnPressing(RIGHT_U),
+            isBtnJustPressed(RIGHT_U),
+            isBtnJustReleased(RIGHT_U),
+            getBtnDuration(RIGHT_U),
+            getBtnCombo(RIGHT_U)
+        ))
 
         # print(getAxis(LEFT_X))
 
         # print(gb.read('opcontrol.keyboard.keys'))
 
-        print("{} {} {} {} {}".format(
-            isBtnPressing("kb:space"),
-            isBtnJustPressed("kb:space"),
-            isBtnJustReleased("kb:space"),
-            getBtnDuration("kb:space"),
-            getBtnCombo("kb:space")
-        ))
+        # print("{} {} {} {} {}".format(
+        #     isBtnPressing("kb:space"),
+        #     isBtnJustPressed("kb:space"),
+        #     isBtnJustReleased("kb:space"),
+        #     getBtnDuration("kb:space"),
+        #     getBtnCombo("kb:space")
+        # ))
 
         # print(gb.read('joystick.main'))
 
         # print(gb.read('joystick.main.axes'), end='                      \r')
 
-        # gb.write('robot.main.update.time', time.time())
+        # gb.write('robot.main.update.time', time.perf_counter())

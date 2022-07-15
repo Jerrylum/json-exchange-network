@@ -17,7 +17,7 @@ def run(share):
         paths = japi.getAvailableJoysticks()
 
         if len(paths) == 0:
-            print("No joystick found, waiting for one. At: " + str(time.time()))
+            print("No joystick found, waiting for one. At: " + str(time.perf_counter()))
             time.sleep(1)
             continue
 
@@ -36,7 +36,7 @@ def run(share):
 
                 gb.write('opcontrol.joystick', {
                     'available': True,
-                    'update': time.time(),
+                    'update': time.perf_counter(),
                     'axes': joystick.axis_states,
                     'btns': joystick.button_states
                 })

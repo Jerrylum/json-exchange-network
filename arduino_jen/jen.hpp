@@ -7,7 +7,7 @@
 #define STL_UINT8_VECTOR STL::vector<uint8_t, 128U>
 #define STL_STRING_VECTOR STL::vector<String, 128>
 #define STL_STOI(x) x.toInt()
-#define JSON_DOC_SIZE 512
+#define JSON_DOC_SIZE 1024
 
 #define DECLARE_WATCHER(type, name, path, body) \
   void name (JsonVariant t) { \
@@ -84,11 +84,10 @@ class Globals {
         send.add(emitter.listeners[i]->getEventName());
       }
     }
-    write("serial." + deviceName + ".watch", send);
+    write("device." + deviceName + ".watch", send);
   }
   
   inline void watch(String path, void (*cb)(JsonVariant t)) {
-    // emitter.addListener(path.c_str(), [](JsonVariant raw) {cb(raw.as<TValue>());});
     emitter.addListener(path.c_str(), cb);
     if (deviceName != "") sync();
   }

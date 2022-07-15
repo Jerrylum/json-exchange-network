@@ -34,7 +34,7 @@ def opcontrolLoop(prepareSymbol: ButtonSymbol = None):
     if prepareSymbol is not None and prepareSymbol not in btnTable:
         btnTable[prepareSymbol] = BtnStatus()
 
-    if time.time() - lastOpcontrolTimestamp < 0.003:
+    if time.perf_counter() - lastOpcontrolTimestamp < 0.003:
         return
 
     lastOpcontrolData = dict(gb.read('opcontrol'))  # IMPORTANT: use dict to make a shallow copy
@@ -45,7 +45,7 @@ def opcontrolLoop(prepareSymbol: ButtonSymbol = None):
 
     # around 1.1ms passed from the beginning of the method, that's why we need to set the last timestamp here instead 
     # of in the beginning of the method to maximize the time difference
-    lastOpcontrolTimestamp = now = time.time()
+    lastOpcontrolTimestamp = now = time.perf_counter()
 
     for symbol, btn in btnTable.items():
         if type(symbol) is str and symbol.startswith('kb:'):
@@ -105,7 +105,7 @@ def getBtnDuration(symbol: ButtonSymbol) -> float:
     opcontrolLoop(symbol)
 
     s = btnTable[symbol]
-    return time.time() - s.press if s.pressing else 0
+    return time.perf_counter() - s.press if s.pressing else 0
 
 
 def getBtnCombo(symbol: ButtonSymbol) -> int:
