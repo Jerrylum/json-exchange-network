@@ -2,7 +2,7 @@ import threading
 import time
 
 
-def run(method):
+def start_thread(method):
     threading.Thread(target=method).start()
 
 
