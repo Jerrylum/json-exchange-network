@@ -12,7 +12,7 @@ ButtonSymbol = Union[str, Callable[[any], bool]]
 class BtnStatus:
     press = 0
     release = 0
-    pressing = 0
+    pressing = False
     combo = 0
 
 
@@ -43,7 +43,7 @@ def opcontrolLoop(prepareSymbol: ButtonSymbol = None):
         if 'kb:' + key not in btnTable:
             btnTable['kb:' + key] = BtnStatus()
 
-    # around 1.1ms passed from the beginning of the method, that's why we need to set the last timestamp here instead 
+    # around 1.1ms passed from the beginning of the method, that's why we need to set the last timestamp here instead
     # of in the beginning of the method to maximize the time difference
     lastOpcontrolTimestamp = now = time.perf_counter()
 

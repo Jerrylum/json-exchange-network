@@ -17,9 +17,6 @@ import workers
 
 
 if __name__ == '__main__':
-    # optional, kill all process that start before it
-    # os.system('sudo kill $(pgrep -f "python3 main.py" | grep -v ' + str(os.getpid()) + ') &> /dev/null')
-
     # to allow tk window to be shown when the command is executed from terminal
     if 'DISPLAY' not in os.environ:
         os.environ['DISPLAY'] = ':0'

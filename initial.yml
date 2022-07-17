@@ -1,0 +1,63 @@
+%YAML 1.2
+
+# This is the initial state and overview of the network.
+# All keys must be ASCII strings and must not start with an underscore.
+# Each root key represents a channel in the network, and therefore, it must be a map.
+
+opcontrol:
+  joystick:
+    available: false
+    update: -1 # last update timestamp
+    axes: {
+      # (symbol name): float
+    }
+    btns: {
+      # (symbol name): boolean
+    }
+  keyboard:
+    keys: {} # Following https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/key-names.html
+
+process:
+  main:
+    pid: -1
+    update: -1 # last update timestamp of the process channel data
+  subprocess: {
+    # (worker name):
+    #   is_alive: boolean
+    #   pid: int
+  }
+
+robot:
+  shooterx:
+    target_pos: 0
+    now_pos: 0
+    output: 0
+    pid:
+      max: 2000
+      min: -2000
+      p: 0.35
+      d: 180
+      i: 0
+  shootery:
+    target_pos: 0
+    now_pos: 0
+    output: 0
+    pid:
+      max: 4000
+      min: -4000
+      p: 0.35
+      d: 180
+      i: 0
+  BLDC: false
+  elevator: false
+  pusher: false
+  platform: false
+
+device: {
+  # (name):
+  #   available: boolean
+  #   type: serial/websocket
+  #   watch:
+  #   - (watching path)
+}
+    

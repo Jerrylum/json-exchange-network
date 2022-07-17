@@ -32,3 +32,21 @@ class Clock:
             pass
 
         self.last_time = time.perf_counter()
+
+
+class TpsCounter:
+    def __init__(self):
+        self._last_sec_timestamp = 0
+        self._tps = 0
+        self._count = 0
+
+    def tick(self):
+        now_timestamp = time.perf_counter()
+        if (now_timestamp - self._last_sec_timestamp) > 1:
+            self._last_sec_timestamp = now_timestamp
+            self._tps = self._count
+            self._count = 0
+        self._count += 1
+
+    def tps(self):
+        return self._tps
