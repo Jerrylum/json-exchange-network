@@ -55,16 +55,20 @@ def run(share):
                 btns = [bool(joystick.get_button(i)) for i in range(joystick.get_numbuttons())]
                 hats = [joystick.get_hat(i) for i in range(joystick.get_numhats())]
 
-                if is_xbox:
-                    rtn_axes = {
-                        "LEFT_X": axis(axes[0]),
-                        "LEFT_Y": axis(axes[1]),
-                        "RIGHT_X": axis(axes[3]),
-                        "RIGHT_Y": axis(axes[4]),
-                        "LEFT_TRIGGER": axes[2],
-                        "RIGHT_TRIGGER": axes[5]
-                    }
+                rtn_axes = {
+                    "LEFT_X": axis(axes[0]),
+                    "LEFT_Y": axis(axes[1]),
+                    "RIGHT_X": axis(axes[3]),
+                    "RIGHT_Y": axis(axes[4]),
+                    "LEFT_TRIGGER": axes[2],
+                    "RIGHT_TRIGGER": axes[5]
+                }
 
+                if is_win:
+                    rtn_axes["RIGHT_X"], rtn_axes["RIGHT_Y"], rtn_axes["LEFT_TRIGGER"] = (
+                        rtn_axes["LEFT_TRIGGER"], rtn_axes["RIGHT_X"], rtn_axes["RIGHT_Y"])
+
+                if is_xbox:
                     rtn_btns = {
                         "RIGHT_D": btns[0],
                         "RIGHT_R": btns[1],
@@ -86,31 +90,12 @@ def run(share):
                     }
 
                     if is_win:
-                        rtn_axes["RIGHT_X"], rtn_axes["RIGHT_Y"], rtn_axes["LEFT_TRIGGER"] = (
-                            rtn_axes["LEFT_TRIGGER"], rtn_axes["RIGHT_X"], rtn_axes["RIGHT_Y"])
-
                         rtn_btns["MODE_BTN"], rtn_btns["LEFT_THUMB"], rtn_btns["RIGHT_THUMB"] = (
                             False, rtn_btns["MODE_BTN"], rtn_btns["LEFT_THUMB"])
 
-                    gb.write("opcontrol.joystick", {
-                        "available": True,
-                        "update": time.perf_counter(),
-                        "axes": rtn_axes,
-                        "btns": rtn_btns
-                    })
                 else:
-                    gb.write("opcontrol.joystick", {
-                        "available": True,
-                        "update": time.perf_counter(),
-                        "axes": {
-                            "LEFT_X": axis(axes[0]),
-                            "LEFT_Y": axis(axes[1]),
-                            "RIGHT_X": axis(axes[2]),
-                            "RIGHT_Y": axis(axes[3]),
-                            "LEFT_TRIGGER": axes[4],
-                            "RIGHT_TRIGGER": axes[5]
-                        },
-                        "btns": {
+                    if is_win:
+                        rtn_btns = {
                             "RIGHT_D": btns[0],
                             "RIGHT_R": btns[1],
                             "RIGHT_L": btns[2],
@@ -124,12 +109,38 @@ def run(share):
                             "MODE_BTN": btns[5],
                             "LEFT_THUMB": btns[7],
                             "RIGHT_THUMB": btns[8],
-                            "LEFT_D": btns[13],
                             "LEFT_U": btns[11],
-                            "LEFT_L": btns[14],
-                            "LEFT_R": btns[12]
+                            "LEFT_D": btns[12],
+                            "LEFT_L": btns[13],
+                            "LEFT_R": btns[14]
                         }
-                    })
+                    else:
+                        rtn_btns = {
+                            "RIGHT_D": btns[0],
+                            "RIGHT_R": btns[1],
+                            "RIGHT_L": btns[3],
+                            "RIGHT_U": btns[2],
+                            "LB": btns[4],
+                            "LT": rtn_axes["LEFT_TRIGGER"] > consts.JOYSTICK_TRIGGER_A2D_THRESHOLD,
+                            "RB": btns[5],
+                            "RT": rtn_axes["RIGHT_TRIGGER"] > consts.JOYSTICK_TRIGGER_A2D_THRESHOLD,
+                            "SELECT_BTN": btns[8],
+                            "START_BTN": btns[9],
+                            "MODE_BTN": btns[10],
+                            "LEFT_THUMB": btns[11],
+                            "RIGHT_THUMB": btns[12],
+                            "LEFT_D": hats[0][1] == -1,
+                            "LEFT_U": hats[0][1] == 1,
+                            "LEFT_L": hats[0][0] == -1,
+                            "LEFT_R": hats[0][0] == 1
+                        }
+
+                gb.write("opcontrol.joystick", {
+                    "available": True,
+                    "update": time.perf_counter(),
+                    "axes": rtn_axes,
+                    "btns": rtn_btns
+                })
 
                 time.sleep(0.01)
         except KeyboardInterrupt:

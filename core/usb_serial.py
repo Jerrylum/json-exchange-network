@@ -178,14 +178,14 @@ class SerialConnectionManager:
     def connect(self):
         self.last_connect_attempt = time.perf_counter()
 
-        tty_list = [p.device for p in list(serial.tools.list_ports.comports())
+        tty_list = [p for p in list(serial.tools.list_ports.comports())
                     if p.device not in PORT_BLACKLIST and p.device not in self.boards]
 
         for f in tty_list:
             try:
-                self.boards[f] = SerialConnection(f)
-                gb.write("device." + f, {"available": False, "type": "serial", "watch": []})
-                print("Open port", f)
+                self.boards[f.device] = SerialConnection(f.device)
+                gb.write("device." + f.device, {"available": False, "type": "serial", "watch": []})
+                print("Open port", f.device, f.serial_number)
             except:
                 self.tryChangePortPermission(f)
 
