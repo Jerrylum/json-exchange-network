@@ -1,5 +1,10 @@
+
 import threading
 import time
+
+import globals as gb
+
+from core.device import RemoteDevice
 
 
 def start_thread(method):
@@ -14,7 +19,7 @@ class Clock:
     def __init__(self, frequency: int, busyWait=False, offset=0.00015):
         self.period = 1 / frequency
         self.last_time = time.perf_counter()
-        self.busyWait = busyWait
+        self.busy_wait = busyWait
         self.offset = offset
         self.sleep = self.period - self.offset
 
@@ -50,3 +55,30 @@ class TpsCounter:
 
     def tps(self):
         return self._tps
+
+
+class WorkerController:
+    _devices: dict[str, RemoteDevice] = {}
+    _clock: Clock = None
+
+    name: str = None
+    serial_manager = None
+    shared_data = None
+
+    def __init__(self, name: str, shared_data: dict):
+        from core.usb_serial import SerialConnectionManager
+        
+        self.name = name
+        self.serial_manager = SerialConnectionManager(self)
+        self.shared_data = shared_data
+
+    def init(self):
+        gb.share = self.shared_data
+        gb.current_worker = self
+
+    def use_clock(self, frequency: int, busyWait=False, offset=0.00015):
+        self._clock = Clock(frequency, busyWait, offset)
+
+    def spin(self):
+        self.serial_manager.spin()
+        self._clock.spin()

@@ -3,6 +3,8 @@ import pygame
 
 import time
 
+from core.tools import WorkerController
+
 import globals as gb
 
 import consts
@@ -14,8 +16,8 @@ def axis(val: float):
     return val
 
 
-def run(share):
-    gb.share = share
+def run(worker: WorkerController):
+    worker.init()
 
     print("Joystick worker started")
 

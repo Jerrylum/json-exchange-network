@@ -28,36 +28,53 @@ process:
   }
 
 robot:
-  shooterx:
-    target_pos: 0
-    now_pos: 0
-    output: 0
-    pid:
-      max: 2000
-      min: -2000
-      p: 0.35
-      d: 180
-      i: 0
-  shootery:
-    target_pos: 0
-    now_pos: 0
-    output: 0
-    pid:
-      max: 4000
-      min: -4000
-      p: 0.35
-      d: 180
-      i: 0
-  BLDC: false
-  elevator: false
-  pusher: false
-  platform: false
+  run: 0
+
+robot_shooter:
+  setting:
+    shooterx:
+      pid:
+        max: 2000
+        min: -2000
+        p: 0.35
+        d: 180
+        i: 0
+    shootery:
+      pid:
+        max: 2000
+        min: -2000
+        p: 0.35
+        d: 180
+        i: 0
+  output:
+    shooterx:
+      target_pos: 0
+    shootery:
+      target_pos: 0
+  feedback:
+    shooterx:
+      now_pos: 0
+      now_speed: 0
+    shootery:
+      now_pos: 0
+      now_speed: 0
+
+robot_gerenal:
+  output:
+    BLDC: false
+    elevator: false
+    pusher: false
+    platform: false
+  feedback:
+    sensor1_value: 0
+    sensor2_value: 0
 
 device: {
   # (name):
   #   available: boolean
   #   type: serial/websocket
   #   watch:
-  #   - (watching path)
+  #   - uuid: str
+  #     path: str
 }
     

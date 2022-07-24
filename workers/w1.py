@@ -3,25 +3,34 @@ import time
 from consts import *
 from core.opcontrol import *
 from core.tools import *
+from core.usb_serial import PortInfo
 
 import globals as gb
 
 
-def run(share):
-    gb.share = share
+def run(worker: WorkerController):
+    worker.init()
+    worker.use_clock(frequency = 100)
+    worker.serial_manager.whitelist.append(PortInfo(serial_number="5513132373735171A0B1"))
 
     time.sleep(1)
 
-    c = Clock(frequency = 100)
-
+    # output = gb.read()
+    output = {}
     g = False
     while True:
-        c.spin()
-
         g = not g
 
+
+        # print("AH", time.perf_counter())
+        # for i in range(1):
+        #     gb.read('robot.platform')
+        # print("AHE", time.perf_counter())
+
+        # print("e", time.perf_counter())
+        # gb.write('robot.platform', g, unsafe=True)
         # gb.write('robot.platform', g)
-        # gb.write('robot.run', str(g))
+        gb.write('robot.run', str(g), unsafe=True)
 
         # print("{} {} {} {} {}".format(
         #     isBtnPressing(RIGHT_U),
@@ -50,3 +59,4 @@ def run(share):
         # print(gb.read('joystick.main.axes'), end='                      \r')
 
         # gb.write('robot.main.update.time', time.perf_counter())
+        worker.spin()

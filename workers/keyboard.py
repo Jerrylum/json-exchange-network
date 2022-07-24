@@ -1,13 +1,14 @@
 from tkinter import *
-from tkinter import ttk
+
+from core.tools import WorkerController
 
 import globals as gb
 
 import time
 
 
-def run(share):
-    gb.share = share
+def run(worker: WorkerController):
+    worker.init()
 
     gb.write('opcontrol.keyboard.keys', {})
 

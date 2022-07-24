@@ -10,6 +10,11 @@ import os
 import crc8
 import msgpack
 from cobs import cobs
+from core.device import RemoteDevice
+from core.tools import WorkerController
+from serial.tools.list_ports_common import ListPortInfo
+from consts import *
+
 
 import globals as gb
 
@@ -114,7 +119,25 @@ class DebugMessageD2HPacket(HostBoundPacket):
         self.message = dataAfterCobs.decode("ascii")
 
 
-class SerialConnection:
+class PortInfo:
+    device: str = None
+    vid: str = None
+    pid: str = None
+    serial_number: str = None
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def match(self, other: ListPortInfo):
+        for key in self.__dict__:
+            if key not in other.__dict__:
+                return False
+            if self.__dict__[key] != other.__dict__[key]:
+                return False
+        return True
+
+
+class SerialConnection(RemoteDevice):
     s: serial.Serial
     start_at: float
     init: bool
@@ -123,10 +146,36 @@ class SerialConnection:
     serial_rx_index = 0
 
     def __init__(self, path: str):
-        self.name = path
+        super().__init__(path)
         self.start_at = time.perf_counter()
         self.init = False
         self.s = serial.Serial(port=path, baudrate=115200, timeout=.1)
+
+    def spin(self):
+        if not self.init:
+            if (time.perf_counter() - self.start_at) > 0.5:
+                self.write(DeviceIdentityH2DPacket(self.name))
+                gb.write("device." + self.name + ".available", True)
+                self.init = True
+                print("Init port", self.name)
+
+                return True
+            return False
+
+        updated = False
+        while self.s.inWaiting():
+            buf = int(self.s.read(1)[0])
+            self.serial_rx[self.serial_rx_index] = buf
+            self.serial_rx_index += 1
+
+            if buf == 0:
+                updated = self.read(bytes(self.serial_rx[0: self.serial_rx_index])) or updated
+                self.serial_rx_index = 0
+
+        return updated
+
+    def watch_update(self, path: str, val):
+        self.write(DataPatchH2DPacket(path, val))
 
     def write(self, packet: DeviceBoundPacket):
         # print("send bytes", packet.data + bytes([0]))
@@ -141,93 +190,147 @@ class SerialConnection:
             packet = packet_class(data)
 
             if packet_class is DataPatchD2HPacket:
-                old_val = False
+                old_watchers = False
 
                 if packet.path == "device." + self.name + ".watch":
-                    old_val = gb.read("packet.path") or []
-                    pass
+                    old_watchers = gb.read(packet.path) or []
 
                 # print("change", packet.path, packet.receive)
                 gb.write(packet.path, packet.receive, True)
 
-                if old_val is not False:
-                    new_watchers = set(gb.read(packet.path)) - set(old_val)
-                    for watcher in new_watchers:
+                if old_watchers is not False:
+                    diff_watchers = set(gb.read(packet.path)) - set(old_watchers)
+                    for watcher in diff_watchers:
                         self.write(DataPatchH2DPacket(watcher,  gb.read(watcher)))
-
+                    return True
+                return False
             if packet_class is DebugMessageD2HPacket:
+                # print("f", time.perf_counter())
                 print("Arduino: {}".format(packet.message))  # TODO
+
+                return False
 
         except BaseException as e:
             print("error buffer", buf)
             print("Decode packet error, ignored.", e)
+        return True
 
 
 class SerialConnectionManager:
-    boards: dict[str, SerialConnection] = {}
+
+    _worker: WorkerController
+
+    whitelist: list[PortInfo] = []
+
+    ignored_update = set()
 
     last_connect_attempt = 0
 
-    def tryChangePortPermission(self, path: str):
+    last_device_info = {}
+
+    last_handled_diff = 0
+
+
+    def __init__(self, worker: WorkerController):
+        self._worker = worker
+
+    def try_change_port_permission(self, path: str):
         try:
             os.system("echo %s|sudo -S %s" % ("robocon", "chmod 666 " + path))
             print("sudo chmod port", path)
         except:
             print("Unable to chmod port", path)
 
+    def update_device_info(self):
+        self.last_device_info = {k: v for k, v in dict(gb.read("device")).items()
+                                 if k in self._worker._devices and type(self._worker._devices[k]) is SerialConnection}
+
+        print(self.last_device_info)
+
     def connect(self):
         self.last_connect_attempt = time.perf_counter()
 
-        tty_list = [p for p in list(serial.tools.list_ports.comports())
-                    if p.device not in PORT_BLACKLIST and p.device not in self.boards]
+        tty_list = [p for p in list(serial.tools.list_ports.comports()) if p.device not in PORT_BLACKLIST]
+
+        tty_list = [p for p in tty_list if any(w.match(p) for w in self.whitelist)]
 
         for f in tty_list:
+            if f.device in list(self._worker._devices.keys()):
+                continue
+
+            deviceInfo = gb.read("device." + f.device)
+            if deviceInfo is not None and deviceInfo["available"] == True:
+                continue
+
             try:
-                self.boards[f.device] = SerialConnection(f.device)
+                self._worker._devices[f.device] = SerialConnection(f.device)
                 gb.write("device." + f.device, {"available": False, "type": "serial", "watch": []})
+                self.update_device_info()
                 print("Open port", f.device, f.serial_number)
             except:
-                self.tryChangePortPermission(f)
+                self.try_change_port_permission(f)
 
-    def loop(self):
+    def spin(self):
         if time.perf_counter() - self.last_connect_attempt > 1:
             self.connect()
 
-        for board_name in list(self.boards.keys()):
-            board = self.boards[board_name]
+        updated = False
+
+        for device_name in list(self._worker._devices.keys()):
+            device = self._worker._devices[device_name]
+            if type(device) is not SerialConnection:
+                continue
+
             try:
-                if not board.init:
-                    if (time.perf_counter() - board.start_at) > 0.5:
-                        board.write(DeviceIdentityH2DPacket(board_name))
-                        gb.write("device." + board_name + ".available", True)
-                        board.init = True
-                        print("Init port", board_name)
-                    continue
-
-                while board.s.inWaiting():
-                    buf = int(board.s.read(1)[0])
-                    board.serial_rx[board.serial_rx_index] = buf
-                    board.serial_rx_index += 1
-
-                    if buf == 0:
-                        board.read(bytes(board.serial_rx[0: board.serial_rx_index]))
-                        board.serial_rx_index = 0
-
+                updated = device.spin() or updated
             except BaseException as e:
-                print("Read error, close port", board_name, e)
-                board.s.close()
-                del self.boards[board_name]
-                gb.write("device." + board_name, {"available": False, "type": "serial", "watch": []})
+                print("Read error, close port", device_name, e)
+                device.s.close()
+                gb.write("device." + device_name, {"available": False, "type": "serial", "watch": []})
+                del self._worker._devices[device_name]
+                self.update_device_info()
 
-        diffs = gb.share["__diff__"]
-        serials = gb.read("device")
-        while len(diffs) != 0:
-            diff = diffs[0]
+        if updated:
+            self.update_device_info()
 
-            for board_name, board_info in serials.items():
-                for watcher in board_info["watch"]:
-                    if diff.startswith(watcher) or watcher.startswith(diff):
-                        # print("send patch to", board_name, watcher, gb.read(watcher))
-                        self.boards[board_name].write(DataPatchH2DPacket(watcher,  gb.read(watcher)))
+        self.sync()
 
-            del diffs[0]
+    def _sync_exact_match(self, diff, val):
+        self.ignored_update.add(diff["uuid"])
+        for device_name, device_info in self.last_device_info.items():
+            # print("sync", time.perf_counter())
+            [self._worker._devices[device_name].watch_update(watcher, val) for watcher in device_info["watch"]
+                if diff["path"] == watcher]
+
+    def _sync_related(self, diff):
+        path = diff["path"]
+        for device_name, device_info in self.last_device_info.items():
+            [self._worker._devices[device_name].watch_update(watcher, gb.read(watcher)) for watcher in device_info["watch"]
+                if (path.startswith(watcher) or watcher.startswith(path)) and path != watcher]
+
+    def sync(self):
+        all_diffs = gb.share["__diff__"]
+
+        diffs = []
+        last_handled = None
+        for i in range(DIFF_QUEUE_SIZE, 0, -1): # XXX: ignore race condition
+            diff = all_diffs[i - 1]
+            if diff["uuid"] == self.last_handled_diff:
+                break
+            if last_handled is None:
+                last_handled = diff["uuid"]
+            if diff["uuid"] in self.ignored_update:
+                self.ignored_update.remove(diff["uuid"])
+                continue
+            diffs.insert(0, diff)
+
+        self.last_handled_diff = last_handled
+
+        # ~1ms passed
+
+        for diff in diffs:
+            for device_name, device_info in self.last_device_info.items():
+                [self._worker._devices[device_name].watch_update(watcher, gb.read(watcher)) for watcher in device_info["watch"]
+                    if diff["path"].startswith(watcher) or watcher.startswith(diff["path"])]
+
+        # print("Done", diffs)
