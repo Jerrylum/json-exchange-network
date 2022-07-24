@@ -5,10 +5,14 @@ DO NOT AUTO-FORMAT THIS FILE
 """
 
 import sys
-
 sys.path.insert(1, './') # XXX: to be able to import modules on project directory; this should be before other imports
 
 import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+# to allow tk window to be shown when the command is executed from terminal
+if 'DISPLAY' not in os.environ:
+    os.environ['DISPLAY'] = ':0'
+
 import time
 from multiprocessing import Manager, Process
 from types import ModuleType
@@ -20,14 +24,10 @@ from core.tools import WorkerController
 
 
 if __name__ == '__main__':
-    # to allow tk window to be shown when the command is executed from terminal
-    if 'DISPLAY' not in os.environ:
-        os.environ['DISPLAY'] = ':0'
-
     try:
-        gb.init(Manager(), ['device', 'opcontrol', 'process', 'robot'])
-
         processes: dict[str, Process] = {}
+
+        gb.init(Manager())
 
         for name in workers.__dict__:
             worker = workers.__dict__[name]
@@ -48,9 +48,9 @@ if __name__ == '__main__':
 
     except KeyboardInterrupt:
         print('Keyboard interrupt')
+    finally:
+        [processes[name].kill() for name in processes]
 
-    [processes[name].kill() for name in processes]
+        print('Program exit')
 
-    print('Program exit')
-
-    exit()
+        exit()

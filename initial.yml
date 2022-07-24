@@ -1,4 +1,5 @@
 %YAML 1.2
+---
 
 # This is the initial state and overview of the network.
 # All keys must be ASCII strings and must not start with an underscore.

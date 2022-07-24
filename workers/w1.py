@@ -30,7 +30,7 @@ def run(worker: WorkerController):
         # print("e", time.perf_counter())
         # gb.write('robot.platform', g, unsafe=True)
         # gb.write('robot.platform', g)
-        gb.write('robot.run', str(g), unsafe=True)
+        gb.write('robot.run', str(g))
 
         # print("{} {} {} {} {}".format(
         #     isBtnPressing(RIGHT_U),

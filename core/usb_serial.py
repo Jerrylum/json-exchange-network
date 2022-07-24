@@ -196,7 +196,7 @@ class SerialConnection(RemoteDevice):
                     old_watchers = gb.read(packet.path) or []
 
                 # print("change", packet.path, packet.receive)
-                gb.write(packet.path, packet.receive, True)
+                gb.write(packet.path, packet.receive)
 
                 if old_watchers is not False:
                     diff_watchers = set(gb.read(packet.path)) - set(old_watchers)
@@ -244,8 +244,6 @@ class SerialConnectionManager:
     def update_device_info(self):
         self.last_device_info = {k: v for k, v in dict(gb.read("device")).items()
                                  if k in self._worker._devices and type(self._worker._devices[k]) is SerialConnection}
-
-        print(self.last_device_info)
 
     def connect(self):
         self.last_connect_attempt = time.perf_counter()
@@ -332,5 +330,3 @@ class SerialConnectionManager:
             for device_name, device_info in self.last_device_info.items():
                 [self._worker._devices[device_name].watch_update(watcher, gb.read(watcher)) for watcher in device_info["watch"]
                     if diff["path"].startswith(watcher) or watcher.startswith(diff["path"])]
-
-        # print("Done", diffs)
