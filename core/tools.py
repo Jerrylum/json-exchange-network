@@ -67,7 +67,7 @@ class WorkerController:
 
     def __init__(self, name: str, shared_data: dict):
         from core.usb_serial import SerialConnectionManager
-        
+
         self.name = name
         self.serial_manager = SerialConnectionManager(self)
         self.shared_data = shared_data

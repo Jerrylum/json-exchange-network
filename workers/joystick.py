@@ -19,8 +19,6 @@ def axis(val: float):
 def run(worker: WorkerController):
     worker.init()
 
-    gb.write("opcontrol.joystick", {"available": False, "update": 0, "axes": {}, "btns": {}})
-
     pygame.init()
 
     while True:

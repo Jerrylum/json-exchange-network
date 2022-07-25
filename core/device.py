@@ -11,4 +11,3 @@ class RemoteDevice:
 
     def watch_update(self, path: str, val):
         pass
-

@@ -14,6 +14,7 @@ if 'DISPLAY' not in os.environ:
     os.environ['DISPLAY'] = ':0'
 
 import time
+import serial.tools.list_ports
 from multiprocessing import Manager, Process
 from types import ModuleType
 
@@ -25,6 +26,8 @@ from core.tools import WorkerController
 
 if __name__ == '__main__':
     try:
+        [print(p.serial_number, str(p) ) for p in list(serial.tools.list_ports.comports())]
+
         processes: dict[str, Process] = {}
 
         gb.init(Manager())

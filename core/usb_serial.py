@@ -6,6 +6,7 @@ import serial.tools.list_ports
 import time
 import threading
 import os
+import traceback
 
 import crc8
 import msgpack
@@ -268,6 +269,14 @@ class SerialConnectionManager:
             except:
                 self.try_change_port_permission(f)
 
+    def async_spin(self):
+        def spin():
+            while True:
+                self.spin()
+                time.sleep(0.001)
+
+        threading.Thread(target=spin).start()
+
     def spin(self):
         if time.perf_counter() - self.last_connect_attempt > 1:
             self.connect()
@@ -283,6 +292,7 @@ class SerialConnectionManager:
                 updated = device.spin() or updated
             except BaseException as e:
                 print("Read error, close port", device_name, e)
+                traceback.print_exc()
                 device.s.close()
                 gb.write("device." + device_name, {"available": False, "type": "serial", "watch": []})
                 del self._worker._devices[device_name]
@@ -322,7 +332,8 @@ class SerialConnectionManager:
                 continue
             diffs.insert(0, diff)
 
-        self.last_handled_diff = last_handled
+        if last_handled is not None:
+            self.last_handled_diff = last_handled
 
         # ~1ms passed
 

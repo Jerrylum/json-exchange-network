@@ -27,9 +27,22 @@ void sendRMMotorCurrent() {
 
 DECLARE_WATCHER(String, test_watcher, "robot.run", console << "Updated " << value;)
 
-DECLARE_WATCHER(bool, platform, "robot.platform", 
-  digitalWrite(AIR_PLATFORM_UP, value ? HIGH : LOW);
-  digitalWrite(AIR_PLATFORM_DOWN, value ? LOW : HIGH);
+static int yy = 0;
+
+DECLARE_WATCHER(JsonObject, platform, "robot_gerenal.output",
+  bool BLDC = value["BLDC"].as<bool>();
+  bool elevator = value["elevator"].as<bool>();
+  bool pusher = value["pusher"].as<bool>();
+  bool platform = value["platform"].as<bool>();
+
+  digitalWrite(EN, BLDC ? HIGH : LOW);
+  digitalWrite(AIR_EA, elevator ? LOW : HIGH);
+  digitalWrite(AIR_EB, elevator ? HIGH : LOW);
+  digitalWrite(AIR_PA, pusher ? LOW : HIGH);
+  digitalWrite(AIR_PB, pusher ? HIGH : LOW);
+  digitalWrite(AIR_PLATFORM_UP, platform ? LOW : HIGH);
+  digitalWrite(AIR_PLATFORM_DOWN, platform ? HIGH : LOW);
+
 )
 
 
