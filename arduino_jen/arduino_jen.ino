@@ -25,11 +25,7 @@ void sendRMMotorCurrent() {
   Can0.sendFrame(tx_msg);
 }
 
-DECLARE_WATCHER(String, test_watcher, "robot.run", console << "Updated " << value;)
-
-static int yy = 0;
-
-DECLARE_WATCHER(JsonObject, platform, "robot_gerenal.output",
+DECLARE_WATCHER(JsonObject, gen_output, "robot_gerenal.output",
   bool BLDC = value["BLDC"].as<bool>();
   bool elevator = value["elevator"].as<bool>();
   bool pusher = value["pusher"].as<bool>();
@@ -43,13 +39,12 @@ DECLARE_WATCHER(JsonObject, platform, "robot_gerenal.output",
   digitalWrite(AIR_PLATFORM_UP, platform ? LOW : HIGH);
   digitalWrite(AIR_PLATFORM_DOWN, platform ? HIGH : LOW);
 
+  static int count = 0;
+  console << "updated " << count++;
 )
 
-
 void setup() {
-  // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
-
   pinMode(EN, OUTPUT);
   pinMode(AIR_PA, OUTPUT);
   pinMode(AIR_EA, OUTPUT);
@@ -58,19 +53,17 @@ void setup() {
   pinMode(AIR_PLATFORM_UP, OUTPUT);
   pinMode(AIR_PLATFORM_DOWN, OUTPUT);
 
-  START_WATCHER(test_watcher);
-
-  START_WATCHER(platform);
+  START_WATCHER(gen_output);
 
   Can0.begin(CAN_BPS_1000K);  //  For communication with RM motors
 
   tx_msg.id = 0x200;
   tx_msg.length = 8;
-  
+
   gb.setup();
 
   Tasks_Add((Task)loop1, 1, 0);
-  Tasks_Add((Task)loop2, 1000, 0);
+  Tasks_Add((Task)loop2, 10, 0);
   Tasks_Add((Task)loop3, 1, 0);
 
   // Start task scheduler
@@ -81,16 +74,12 @@ void loop1() {  // Serial
   gb.loop();
 }
 
-static int count_time = 0;
-
 void loop2() {  // Send sensors / encoders data
-  StaticJsonDocument<128> test;
-  test["t"] = count_time;
+  StaticJsonDocument<128> gen_feedback;
+  gen_feedback["sensor1_value"] = 123;
+  gen_feedback["sensor2_value"] = 456;
 
-  gb.write("robot.time", count_time);
-  gb.write("robot.test", test);
-
-  // count_time = 0;
+  gb.write("robot_gerenal.feedback", gen_feedback);
 }
 
 void loop3() {  // PID Calculation
@@ -108,19 +97,6 @@ void loop3() {  // PID Calculation
 
 // the loop function runs over and over again forever, runs ~14000 times per second
 void loop() {
-  static int local_count = 0;
-
-  if (local_count++ > 10) {
-    local_count = 0;
-    count_time += 10;
-    delay(1);
-  }
-
   Can0.watchFor();
   Can0.read(rx_msg);
-
-  // digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-  // delay(500);                       // wait for a second
-  // digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-  // delay(500);                       // wait for a second
 }

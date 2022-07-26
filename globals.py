@@ -1,3 +1,4 @@
+import threading
 import uuid
 import yaml
 import os
@@ -23,12 +24,13 @@ def init(manager: SyncManager):
             initial = yaml.safe_load(stream)
             for k in initial:
                 anything = initial[k]
-                share[k] = manager.dict(anything)
+                share[k] = manager.dict(anything) if isinstance(anything, dict) else manager.list(anything)
         except yaml.YAMLError as exc:
             print(exc)
             raise
 
     share['__diff__'] = manager.list([{"uuid": 0, "path": "ignored"}] * consts.DIFF_QUEUE_SIZE)
+    share['__diff_condition__'] = manager.Condition()
 
     print('Share network initialized. ', manager.address, current_process().authkey)
 
@@ -65,7 +67,7 @@ def write(path: str, val: any):
                 parent.extend([None] * (current - len(parent) + 1))
                 make_current = True
         else:
-            make_current = not current in parent # or parent[current] is None
+            make_current = not current in parent  # or parent[current] is None
 
         if len(cn) == 1:
             ans = val
@@ -93,8 +95,12 @@ def write(path: str, val: any):
     if not path.startswith('_') and '._' not in path:
         # race condition might occur
         # XXX: ignored
-        share['__diff__'].append(diff)
-        share['__diff__'].pop(0)
+        diffs: list = share['__diff__']
+        diffs.append(diff)
+        diffs.pop(0)
+        condition: threading.Condition = share['__diff_condition__']
+        with condition:
+            condition.notify_all()
 
         if current_worker is not None:
             current_worker.serial_manager._sync_related(diff)

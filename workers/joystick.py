@@ -3,7 +3,7 @@ import pygame
 
 import time
 
-from core.tools import WorkerController
+from core.tools import TpsCounter, WorkerController
 
 import globals as gb
 
@@ -47,6 +47,7 @@ def run(worker: WorkerController):
                 print("Joystick found:", joystick.get_name())
 
             while pygame.joystick.get_count() != 0:
+                pygame.event.wait(consts.JOYSTICK_UPDATE_MAXIMUM_INTERVAL * 1000)
                 pygame.event.pump()
 
                 axes = [joystick.get_axis(i) for i in range(joystick.get_numaxes())]
@@ -140,7 +141,8 @@ def run(worker: WorkerController):
                     "btns": rtn_btns
                 })
 
-                time.sleep(0.01)
+                time.sleep(consts.JOYSTICK_UPDATE_MINIMUM_INTERVAL)
+
         except KeyboardInterrupt:
             break
         except BaseException as e:

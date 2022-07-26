@@ -76,7 +76,7 @@ class WorkerController:
         gb.share = self.shared_data
         gb.current_worker = self
 
-    def use_clock(self, frequency: int, busyWait=False, offset=0.00015):
+    def use_clock(self, frequency: int, busyWait=False, offset=0.0004):
         self._clock = Clock(frequency, busyWait, offset)
 
     def spin(self):

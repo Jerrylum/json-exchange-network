@@ -139,48 +139,61 @@ class PortInfo:
 
 
 class SerialConnection(RemoteDevice):
+    manager: any
     s: serial.Serial
     start_at: float
     init: bool
 
+    write_lock = threading.Lock()
     serial_rx = [0] * 2048
     serial_rx_index = 0
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, manager: any):
         super().__init__(path)
+        self.manager = manager
         self.start_at = time.perf_counter()
         self.init = False
-        self.s = serial.Serial(port=path, baudrate=115200, timeout=.1)
+        self.s = serial.Serial(port=path, baudrate=115200)
+        gb.write("device." + self.name, {"available": False, "type": "serial", "watch": []})
+        self.open = True
 
-    def spin(self):
-        if not self.init:
-            if (time.perf_counter() - self.start_at) > 0.5:
+        def read_thread():
+            try:
+                time.sleep(0.5)
+
                 self.write(DeviceIdentityH2DPacket(self.name))
                 gb.write("device." + self.name + ".available", True)
+                manager.update_device_info()
                 self.init = True
                 print("Init port", self.name)
 
-                return True
-            return False
+                while self.open:
+                    buf = int(self.s.read(1)[0])
+                    self.serial_rx[self.serial_rx_index] = buf
+                    self.serial_rx_index += 1
 
-        updated = False
-        while self.s.inWaiting():
-            buf = int(self.s.read(1)[0])
-            self.serial_rx[self.serial_rx_index] = buf
-            self.serial_rx_index += 1
+                    if buf == 0:
+                        self.read(bytes(self.serial_rx[0: self.serial_rx_index]))
+                        self.serial_rx_index = 0
+            except Exception as e:
+                print("Read error, close port", self.name, e)
+                traceback.print_exc()
+                self.close()
 
-            if buf == 0:
-                updated = self.read(bytes(self.serial_rx[0: self.serial_rx_index])) or updated
-                self.serial_rx_index = 0
+        threading.Thread(target=read_thread).start()
 
-        return updated
+    def close(self):
+        self.open = False
+        self.s.close()
+        gb.write("device." + self.name, {"available": False, "type": "serial", "watch": []})
 
     def watch_update(self, path: str, val):
         self.write(DataPatchH2DPacket(path, val))
 
     def write(self, packet: DeviceBoundPacket):
         # print("send bytes", packet.data + bytes([0]))
-        self.s.write(packet.data + bytes([0]))
+        with self.write_lock:
+            self.s.write(packet.data + bytes([0]))
 
     def read(self, buf: bytes):
         try:
@@ -203,18 +216,16 @@ class SerialConnection(RemoteDevice):
                     diff_watchers = set(gb.read(packet.path)) - set(old_watchers)
                     for watcher in diff_watchers:
                         self.write(DataPatchH2DPacket(watcher,  gb.read(watcher)))
-                    return True
-                return False
+                    
+                    self.manager.update_device_info()
+
             if packet_class is DebugMessageD2HPacket:
                 # print("f", time.perf_counter())
                 print("Arduino: {}".format(packet.message))  # TODO
 
-                return False
-
         except BaseException as e:
             print("error buffer", buf)
             print("Decode packet error, ignored.", e)
-        return True
 
 
 class SerialConnectionManager:
@@ -222,15 +233,12 @@ class SerialConnectionManager:
     _worker: WorkerController
 
     whitelist: list[PortInfo] = []
+    started = False
 
     ignored_update = set()
-
     last_connect_attempt = 0
-
     last_device_info = {}
-
     last_handled_diff = 0
-
 
     def __init__(self, worker: WorkerController):
         self._worker = worker
@@ -262,51 +270,33 @@ class SerialConnectionManager:
                 continue
 
             try:
-                self._worker._devices[f.device] = SerialConnection(f.device)
-                gb.write("device." + f.device, {"available": False, "type": "serial", "watch": []})
+                self._worker._devices[f.device] = SerialConnection(f.device, self)
                 self.update_device_info()
                 print("Open port", f.device, f.serial_number)
             except:
                 self.try_change_port_permission(f)
 
-    def async_spin(self):
-        def spin():
-            while True:
-                self.spin()
-                time.sleep(0.001)
+    def start_listening(self):
+        if self.started:
+            return
+        self.started = True
 
-        threading.Thread(target=spin).start()
+        def sync_thread():
+            condition: threading.Condition = gb.share['__diff_condition__']
+            while True:
+                with condition:
+                    condition.wait()
+                    self.sync()
+
+        threading.Thread(target=sync_thread).start()
 
     def spin(self):
-        if time.perf_counter() - self.last_connect_attempt > 1:
+        if self.started and time.perf_counter() - self.last_connect_attempt > 1:
             self.connect()
-
-        updated = False
-
-        for device_name in list(self._worker._devices.keys()):
-            device = self._worker._devices[device_name]
-            if type(device) is not SerialConnection:
-                continue
-
-            try:
-                updated = device.spin() or updated
-            except BaseException as e:
-                print("Read error, close port", device_name, e)
-                traceback.print_exc()
-                device.s.close()
-                gb.write("device." + device_name, {"available": False, "type": "serial", "watch": []})
-                del self._worker._devices[device_name]
-                self.update_device_info()
-
-        if updated:
-            self.update_device_info()
-
-        self.sync()
 
     def _sync_exact_match(self, diff, val):
         self.ignored_update.add(diff["uuid"])
         for device_name, device_info in self.last_device_info.items():
-            # print("sync", time.perf_counter())
             [self._worker._devices[device_name].watch_update(watcher, val) for watcher in device_info["watch"]
                 if diff["path"] == watcher]
 
@@ -323,7 +313,7 @@ class SerialConnectionManager:
         last_handled = None
         for i in range(DIFF_QUEUE_SIZE, 0, -1): # XXX: ignore race condition
             diff = all_diffs[i - 1]
-            if diff["uuid"] == self.last_handled_diff:
+            if diff["uuid"] == self.last_handled_diff or diff["uuid"] == 0:
                 break
             if last_handled is None:
                 last_handled = diff["uuid"]
