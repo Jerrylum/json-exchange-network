@@ -31,44 +31,44 @@ process:
 robot:
   run: 0
 
-robot_shooter:
+rs: # robot_shooter
   setting:
-    shooterx:
+    sx: # shooterx
       pid:
         max: 2000
         min: -2000
         p: 0.35
         d: 180
         i: 0
-    shootery:
+    sy: # shootery
       pid:
         max: 2000
         min: -2000
         p: 0.35
         d: 180
         i: 0
-  output:
-    shooterx:
-      target_pos: 0
-    shootery:
-      target_pos: 0
-  feedback:
-    shooterx:
+  o: # output
+    sx: # shooterx
+      pos: 0 # target_pos
+    sy: # shootery
+      pos: 0
+  f: # feedback
+    sx: # shooterx
       now_pos: 0
       now_speed: 0
-    shootery:
+    sy: # shootery
       now_pos: 0
       now_speed: 0
 
-robot_gerenal:
-  output:
+rg: # robot_gerenal
+  o:
     BLDC: false
-    elevator: false
-    pusher: false
-    platform: false
-  feedback:
-    sensor1_value: 0
-    sensor2_value: 0
+    e: false # elevator
+    pu: false # pusher
+    pl: false # platform
+  f:
+    s1: 0 # sensor1
+    s2: 0
 
 device: {
   # (name):

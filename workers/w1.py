@@ -15,19 +15,25 @@ def run(worker: WorkerController):
     worker.serial_manager.whitelist.append(PortInfo(serial_number="7513131383235170F071"))
     worker.serial_manager.start_listening()
 
-    gen_output = gb.read("robot_gerenal.output")
+    gen_output = gb.read("rg.o")
+    shooter_output = gb.read("rs.o")
 
     while True:
         if isBtnJustPressed(RIGHT_L):
             gen_output["BLDC"] = not gen_output["BLDC"]
 
-        gen_output["elevator"] = isBtnPressing(RIGHT_U)
-        gen_output["pusher"] = isBtnPressing(RIGHT_R)
+        gen_output["e"] = isBtnPressing(RIGHT_U)
+        gen_output["pu"] = isBtnPressing(RIGHT_R)
 
         if isBtnJustPressed(RIGHT_D):
-            gen_output["platform"] = not gen_output["platform"]
+            gen_output["pl"] = not gen_output["pl"]
 
-        gb.write("robot_gerenal.output", gen_output)
+        gb.write("rg.o", gen_output)
+
+        shooter_output["sx"]["pos"] = int(getAxis(LEFT_X) * 8192 * 19 * (45 / 360) * 7)
+        shooter_output["sy"]["pos"] = int(-getAxis(LEFT_Y) * 8192 * 19 * (150 / 360))
+
+        gb.write("rs.o", shooter_output)
 
         # print("local", gen_output)
         # print("e", time.perf_counter())
