@@ -27,7 +27,7 @@
 
 void consolePrint(String msg);
 
-#include "EventEmitter.hpp"
+#include "event_emitter.hpp"
 
 namespace jen {
 

@@ -54,13 +54,13 @@ class bounding_helper {
       internal_tick_counter += tick_limit_high;
     else if (is_close_to_low && machine_tick > tick_limit_high - tick_gate)
       internal_tick_counter -= tick_limit_high;
-  
+
     internal_tick_counter += machine_tick - last_machine_tick;
-  
+
     is_close_to_low = machine_tick < tick_limit_low + tick_gate;
     is_close_to_high = machine_tick > tick_limit_high - tick_gate;
     last_machine_tick = machine_tick;
-  
+
     return internal_tick_counter;
   }
  

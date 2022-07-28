@@ -1,3 +1,5 @@
+#pragma once
+
 // https://github.com/josephlarralde/ArduinoEventEmitter
 
 #ifndef _ARDUINO_EVENT_EMITTER_H_

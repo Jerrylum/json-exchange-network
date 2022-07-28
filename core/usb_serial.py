@@ -193,7 +193,7 @@ class SerialConnection(RemoteDevice):
     def write(self, packet: DeviceBoundPacket):
         # print("send bytes", packet.data + bytes([0]))
         with self.write_lock:
-            print("AHHHHHHHHHHHHHHHHH", len(packet.data))
+            print("Packet size:", len(packet.data))
             self.s.write(packet.data + bytes([0]))
 
     def read(self, buf: bytes):
@@ -210,6 +210,7 @@ class SerialConnection(RemoteDevice):
                 if packet.path == "device." + self.name + ".watch":
                     old_watchers = gb.read(packet.path) or []
 
+                # print("received size", len(buf))
                 # print("change", packet.path, packet.receive)
                 gb.write(packet.path, packet.receive)
 

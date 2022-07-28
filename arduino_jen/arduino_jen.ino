@@ -24,12 +24,11 @@ int rm_gearbox_position[Motor_Num];
 int rm_unbound_position[Motor_Num];
 bounding_helper rm_bounding_helper[Motor_Num];
 
-//PID shooterx_pos_pid = PID(1, 2000, -2000, 0.30, 7000, 0);
-PID shooterx_pos_pid = PID(1, 2000, -2000, 0.35, 180, 0);
+PID shooterx_pos_pid = PID(1, 0, 0, 0, 0, 0);
 int shooterx_target_pos = 0;
 
-PID shootery_pos_pid = PID(1, 4000, -4000, 0.35, 180, 0);
-int shootery_target_pos = 0; // 0.02 -> 0.022 -> 0.025
+PID shootery_pos_pid = PID(1, 0, 0, 0, 0, 0);
+int shootery_target_pos = 0;
 
 int shooterx_debug_speed_log = 0;
 int shootery_debug_speed_log = 0;
@@ -42,6 +41,26 @@ void sendRMMotorCurrent() {
 
   Can0.sendFrame(tx_msg);
 }
+
+DECLARE_WATCHER(JsonObject, shooter_setting, "rs.s",
+  JsonVariant sx = value["sx"]["pid"];
+  JsonVariant sy = value["sy"]["pid"];
+
+  shooterx_pos_pid._pimpl->_max = sx["max"] | 0.0;
+  shooterx_pos_pid._pimpl->_min = sx["min"] | 0.0;
+  shooterx_pos_pid._pimpl->_Kp = sx["p"] | 0.0;
+  shooterx_pos_pid._pimpl->_Kd = sx["d"] | 0.0;
+  shooterx_pos_pid._pimpl->_Ki = sx["i"] | 0.0;
+
+  shootery_pos_pid._pimpl->_max = sy["max"] | 0.0;
+  shootery_pos_pid._pimpl->_min = sy["min"] | 0.0;
+  shootery_pos_pid._pimpl->_Kp = sy["p"] | 0.0;
+  shootery_pos_pid._pimpl->_Kd = sy["d"] | 0.0;
+  shootery_pos_pid._pimpl->_Ki = sy["i"] | 0.0;
+
+  static int count = 0;
+  console << "updated pid" << count++;
+)
 
 DECLARE_WATCHER(JsonObject, gen_output, "rg.o",
   bool BLDC = value["BLDC"].as<bool>();
@@ -62,8 +81,8 @@ DECLARE_WATCHER(JsonObject, gen_output, "rg.o",
 )
 
 DECLARE_WATCHER(JsonObject, shooter_output, "rs.o",
-  float x = value["sx"]["pos"].as<float>();
-  float y = value["sy"]["pos"].as<float>();
+  int x = value["sx"]["pos"].as<int>();
+  int y = value["sy"]["pos"].as<int>();
 
   shooterx_target_pos = x;
   shootery_target_pos = y;
@@ -83,6 +102,7 @@ void setup() {
   pinMode(AIR_PLATFORM_UP, OUTPUT);
   pinMode(AIR_PLATFORM_DOWN, OUTPUT);
 
+  START_WATCHER(shooter_setting);
   START_WATCHER(gen_output);
   START_WATCHER(shooter_output);
 
@@ -106,19 +126,19 @@ void loop1() {  // Serial
 }
 
 void loop2() {  // Send sensors / encoders data
-  // StaticJsonDocument<128> gen_feedback;
-  // gen_feedback["sensor1_value"] = 123;
-  // gen_feedback["sensor2_value"] = 456;
+  StaticJsonDocument<128> gen_feedback;
+  gen_feedback["s1"] = 123;
+  gen_feedback["s2"] = 456;
 
-  // gb.write("robot_gerenal.feedback", gen_feedback);
+  gb.write("rg.f", gen_feedback);
 
   StaticJsonDocument<128> shooter_feedback;
-  shooter_feedback["sx"]["now_pos"] = rm_unbound_position[0];
-  shooter_feedback["sx"]["now_speed"] = rm_speed[0];
-  shooter_feedback["sx"]["output_speed"] = shooterx_debug_speed_log;
-  shooter_feedback["sy"]["now_pos"] = rm_unbound_position[1];
-  shooter_feedback["sy"]["now_speed"] = rm_speed[1];
-  shooter_feedback["sy"]["output_speed"] = shootery_debug_speed_log;
+  shooter_feedback["sx"]["pos"] = rm_unbound_position[0];
+  shooter_feedback["sx"]["sp"] = rm_speed[0];
+  shooter_feedback["sx"]["out"] = shooterx_debug_speed_log;
+  shooter_feedback["sy"]["pos"] = rm_unbound_position[1];
+  shooter_feedback["sy"]["sp"] = rm_speed[1];
+  shooter_feedback["sy"]["out"] = shootery_debug_speed_log;
 
   gb.write("rs.f", shooter_feedback);
 }
@@ -127,8 +147,7 @@ void loop3() {  // PID Calculation
   int result;
 
   result = shooterx_pos_pid.calculate(shooterx_target_pos, rm_unbound_position[0]);
-  rm_output[0] = result;
-  shooterx_debug_speed_log = result;
+  rm_output[0] = shooterx_debug_speed_log = result;
 
   result = shootery_pos_pid.calculate(shootery_target_pos, rm_unbound_position[1]);
   rm_output[1] = shootery_debug_speed_log = result;

@@ -28,11 +28,8 @@ process:
     #   pid: int
   }
 
-robot:
-  run: 0
-
 rs: # robot_shooter
-  setting:
+  s: # setting
     sx: # shooterx
       pid:
         max: 2000
@@ -42,8 +39,8 @@ rs: # robot_shooter
         i: 0
     sy: # shootery
       pid:
-        max: 2000
-        min: -2000
+        max: 4000
+        min: -4000
         p: 0.35
         d: 180
         i: 0
@@ -54,11 +51,13 @@ rs: # robot_shooter
       pos: 0
   f: # feedback
     sx: # shooterx
-      now_pos: 0
-      now_speed: 0
+      pos: 0 # now_pos
+      sp: 0 # now_speed
+      out: 0 # output_speed
     sy: # shootery
-      now_pos: 0
-      now_speed: 0
+      pos: 0
+      sp: 0
+      out: 0
 
 rg: # robot_gerenal
   o:
