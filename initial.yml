@@ -30,14 +30,14 @@ process:
 
 rs: # robot_shooter
   s: # setting
-    sx: # shooterx
+    sx: # shooter x
       pid:
         max: 2000
         min: -2000
         p: 0.35
         d: 180
         i: 0
-    sy: # shootery
+    sy: # shooter y
       pid:
         max: 4000
         min: -4000
@@ -45,29 +45,25 @@ rs: # robot_shooter
         d: 180
         i: 0
   o: # output
-    sx: # shooterx
-      pos: 0 # target_pos
-    sy: # shootery
-      pos: 0
+  - 0 # shooter x target_pos
+  - 0 # shooter x target_pos
   f: # feedback
-    sx: # shooterx
-      pos: 0 # now_pos
-      sp: 0 # now_speed
-      out: 0 # output_speed
-    sy: # shootery
-      pos: 0
-      sp: 0
-      out: 0
+  - 0 # shooter x now_pos
+  - 0 # shooter x now_speed
+  - 0 # shooter x output_speed
+  - 0 # shooter y now_pos
+  - 0 # shooter y now_speed
+  - 0 # shooter y output_speed
 
-rg: # robot_gerenal
+rg: # robot_general
   o:
-    BLDC: false
-    e: false # elevator
-    pu: false # pusher
-    pl: false # platform
+  - false # BLDC
+  - false # elevator
+  - false # pusher
+  - false # platform
   f:
-    s1: 0 # sensor1
-    s2: 0
+  - 0 # sensor1
+  - 0 # sensor2
 
 device: {
   # (name):

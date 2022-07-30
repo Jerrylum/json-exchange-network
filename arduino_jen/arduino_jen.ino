@@ -55,11 +55,11 @@ DECLARE_WATCHER(JsonObject, shooter_setting, "rs.s",
   console << "updated pid" << count++;
 )
 
-DECLARE_WATCHER(JsonObject, gen_output, "rg.o",
-  bool BLDC = value["BLDC"].as<bool>();
-  bool elevator = value["e"].as<bool>();
-  bool pusher = value["pu"].as<bool>();
-  bool platform = value["pl"].as<bool>();
+DECLARE_WATCHER(JsonArray, gen_output, "rg.o",
+  bool BLDC = value[0].as<bool>();
+  bool elevator = value[1].as<bool>();
+  bool pusher = value[2].as<bool>();
+  bool platform = value[3].as<bool>();
 
   digitalWrite(EN, BLDC ? HIGH : LOW);
   digitalWrite(AIR_EA, elevator ? LOW : HIGH);
@@ -73,9 +73,9 @@ DECLARE_WATCHER(JsonObject, gen_output, "rg.o",
   console << "updated " << count++;
 )
 
-DECLARE_WATCHER(JsonObject, shooter_output, "rs.o",
-  int x = value["sx"]["pos"].as<int>();
-  int y = value["sy"]["pos"].as<int>();
+DECLARE_WATCHER(JsonArray, shooter_output, "rs.o",
+  int x = value[0].as<int>();
+  int y = value[1].as<int>();
 
   group1_rm[0].target_tick = x;
   group1_rm[1].target_tick = y;
@@ -117,18 +117,18 @@ void loop1() {  // Serial
 
 void loop2() {  // Send sensors / encoders data
   StaticJsonDocument<128> gen_feedback;
-  gen_feedback["s1"] = 123;
-  gen_feedback["s2"] = 456;
+  gen_feedback[0] = 123;
+  gen_feedback[1] = 456;
 
   gb.write("rg.f", gen_feedback);
 
   StaticJsonDocument<128> shooter_feedback;
-  shooter_feedback["sx"]["pos"] = group1_rm[0].unbound_tick;
-  shooter_feedback["sx"]["sp"] = group1_rm[0].speed;
-  shooter_feedback["sx"]["out"] = group1_rm[0].output;
-  shooter_feedback["sy"]["pos"] = group1_rm[1].unbound_tick;
-  shooter_feedback["sy"]["sp"] = group1_rm[1].speed;
-  shooter_feedback["sy"]["out"] = group1_rm[1].output;
+  shooter_feedback[0] = group1_rm[0].unbound_tick;
+  shooter_feedback[1] = group1_rm[0].speed;
+  shooter_feedback[2] = group1_rm[0].output;
+  shooter_feedback[3] = group1_rm[1].unbound_tick;
+  shooter_feedback[4] = group1_rm[1].speed;
+  shooter_feedback[5] = group1_rm[1].output;
 
   gb.write("rs.f", shooter_feedback);
 }

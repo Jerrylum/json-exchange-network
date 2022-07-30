@@ -29,7 +29,4 @@ def run(worker: WorkerController):
     # ))
 
     # time.sleep(5)
-    # gen_output = gb.read("robot_gerenal.output")
-    # gen_output["elevator"] = True
-    # gb.write("robot_gerenal.output", gen_output)
     pass

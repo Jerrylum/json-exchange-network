@@ -192,7 +192,7 @@ class SerialConnection(RemoteDevice):
     def write(self, packet: DeviceBoundPacket):
         # print("send bytes", packet.data + bytes([0]))
         with self.write_lock:
-            # print("Packet size:", len(packet.data))
+            print("Packet size:", len(packet.data))
             self.s.write(packet.data + bytes([0]))
 
     def read(self, buf: bytes):

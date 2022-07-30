@@ -20,22 +20,23 @@ def run(worker: WorkerController):
 
     while True:
         if isBtnJustPressed(RIGHT_L):
-            gen_output["BLDC"] = not gen_output["BLDC"]
+            gen_output[0] = not gen_output[0]
 
-        gen_output["e"] = isBtnPressing(RIGHT_U)
-        gen_output["pu"] = isBtnPressing(RIGHT_R)
+        gen_output[1] = isBtnPressing(RIGHT_U)
+        gen_output[2] = isBtnPressing(RIGHT_R)
 
         if isBtnJustPressed(RIGHT_D):
-            gen_output["pl"] = not gen_output["pl"]
+            gen_output[3] = not gen_output[3]
 
         gb.write("rg.o", gen_output)
 
-        shooter_output["sx"]["pos"] = int(getAxis(LEFT_X) * 8192 * 19 * (45 / 360) * 7)
-        shooter_output["sy"]["pos"] = int(-getAxis(LEFT_Y) * 8192 * 19 * (150 / 360))
+        shooter_output[0] = int(getAxis(LEFT_X) * 8192 * 19 * (45 / 360) * 7)
+        shooter_output[1] = int(-getAxis(LEFT_Y) * 8192 * 19 * (150 / 360))
 
         gb.write("rs.o", shooter_output)
 
         # print("local", gen_output)
         # print("e", time.perf_counter())
+        # print("feedback", gb.read("rg.f"))
 
         worker.spin()

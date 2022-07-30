@@ -10,13 +10,20 @@
         "typeinfo": "cpp"
     },
     "cSpell.words": [
+        "baudrate",
         "BLDC",
         "btns",
         "consts",
+        "keysym",
+        "levelno",
+        "msecs",
+        "msgpack",
         "numaxes",
         "numbuttons",
         "numhats",
         "opcontrol",
-        "pygame"
+        "packb",
+        "pygame",
+        "unpackb"
     ]
 }
