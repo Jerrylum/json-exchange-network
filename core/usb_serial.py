@@ -11,8 +11,8 @@ import traceback
 import crc8
 import msgpack
 from cobs import cobs
-from core.device import RemoteDevice
-from core.tools import WorkerController
+from core.device import *
+from core.tools import *
 from serial.tools.list_ports_common import ListPortInfo
 from consts import *
 
@@ -165,7 +165,7 @@ class SerialConnection(RemoteDevice):
                 gb.write("device." + self.name + ".available", True)
                 manager.update_device_info()
                 self.init = True
-                print("Init port", self.name)
+                logger.info("Serial device %s connected" % self.name)
 
                 while self.open:
                     buf = int(self.s.read(1)[0])
@@ -176,9 +176,8 @@ class SerialConnection(RemoteDevice):
                         self.read(bytes(self.serial_rx[0: self.serial_rx_index]))
                         self.serial_rx_index = 0
             except Exception as e:
-                print("Read error, close port", self.name, e)
-                traceback.print_exc()
-                self.close()
+                logger.error("Error in \"%s\" read thread" % self.name, exc_info=True)
+                self.manager.disconnect(self.name)
 
         threading.Thread(target=read_thread).start()
 
@@ -193,7 +192,7 @@ class SerialConnection(RemoteDevice):
     def write(self, packet: DeviceBoundPacket):
         # print("send bytes", packet.data + bytes([0]))
         with self.write_lock:
-            print("Packet size:", len(packet.data))
+            # print("Packet size:", len(packet.data))
             self.s.write(packet.data + bytes([0]))
 
     def read(self, buf: bytes):
@@ -227,7 +226,7 @@ class SerialConnection(RemoteDevice):
 
         except BaseException as e:
             print("error buffer", buf)
-            print("Decode packet error, ignored.", e)
+            logger.error("Error in \"%s\" read thread" % self.name, exc_info=True)
 
 
 class SerialConnectionManager:
@@ -274,9 +273,16 @@ class SerialConnectionManager:
             try:
                 self._worker._devices[f.device] = SerialConnection(f.device, self)
                 self.update_device_info()
-                print("Open port", f.device, f.serial_number)
+                logger.info("Serial device %s (%s) connected" % (f.device, f.serial_number))
             except:
                 self.try_change_port_permission(f)
+
+    def disconnect(self, name: str):
+        if name in self._worker._devices and type(self._worker._devices[name]) is SerialConnection:
+            self._worker._devices[name].close()
+            del self._worker._devices[name]
+            self.update_device_info()
+            logger.warning("Serial device %s disconnected" % name)
 
     def start_listening(self):
         if self.started:

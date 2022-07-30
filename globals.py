@@ -5,11 +5,10 @@ import os
 
 from multiprocessing.managers import SyncManager, process
 from multiprocessing.process import current_process
-from typing import List
 
 import consts
 
-from core.tools import WorkerController
+from core.tools import *
 
 share: any = None
 current_worker: WorkerController = None
@@ -25,8 +24,8 @@ def init(manager: SyncManager):
             for k in initial:
                 anything = initial[k]
                 share[k] = manager.dict(anything) if isinstance(anything, dict) else manager.list(anything)
-        except yaml.YAMLError as exc:
-            print(exc)
+        except:
+            logger.critical("Failed to load initial.yml", exc_info=True)
             raise
 
     share['__diff__'] = manager.list([{"uuid": 0, "path": "ignored"}] * consts.DIFF_QUEUE_SIZE)

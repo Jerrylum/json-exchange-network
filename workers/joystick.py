@@ -3,7 +3,7 @@ import pygame
 
 import time
 
-from core.tools import TpsCounter, WorkerController
+from core.tools import *
 
 import globals as gb
 
@@ -32,7 +32,7 @@ def run(worker: WorkerController):
                     gb.write("opcontrol.joystick.axes", {})
                     gb.write("opcontrol.joystick.btns", {})
 
-                print("No joystick found, waiting for one. At: " + str(time.time()))
+                logger.info("Waiting for joystick...")
 
                 time.sleep(1)
 
@@ -42,9 +42,9 @@ def run(worker: WorkerController):
             is_win = platform.system() == "Windows"
 
             if pygame.joystick.get_count() > 1:
-                print("More than one joystick found, using first one:", joystick.get_name())
-            else:
-                print("Joystick found:", joystick.get_name())
+                logger.warning("More than one joystick connected, using the first one")
+            
+            logger.info("Listening joystick: %s - %s" % (joystick.get_guid() ,name))
 
             while pygame.joystick.get_count() != 0:
                 pygame.event.wait(consts.JOYSTICK_UPDATE_MAXIMUM_INTERVAL * 1000)
@@ -143,11 +143,10 @@ def run(worker: WorkerController):
 
                 time.sleep(consts.JOYSTICK_UPDATE_MINIMUM_INTERVAL)
 
+            logger.warning("All joystick disconnected")
         except KeyboardInterrupt:
             break
-        except BaseException as e:
-            print("Joystick worker error:", e)
-            pass
+        except:
+            logger.error("Joystick loop error", exc_info=True)
 
     pygame.quit()
-    print("Joystick worker ended")

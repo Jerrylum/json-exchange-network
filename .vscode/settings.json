@@ -8,5 +8,15 @@
         "type_traits": "cpp",
         "utility": "cpp",
         "typeinfo": "cpp"
-    }
+    },
+    "cSpell.words": [
+        "BLDC",
+        "btns",
+        "consts",
+        "numaxes",
+        "numbuttons",
+        "numhats",
+        "opcontrol",
+        "pygame"
+    ]
 }

@@ -5,9 +5,8 @@
 
 #include "pid.hpp"
 #include "bounding_helper.hpp"
+#include "rm_motor.hpp"
 
-
-#define Motor_Num 2
 #define EN 6
 #define AIR_PA 3
 #define AIR_PB 2
@@ -18,25 +17,17 @@
 
 CAN_FRAME tx_msg, rx_msg;
 
-int rm_output[Motor_Num] = {0};
-int rm_speed[Motor_Num];
-int rm_gearbox_position[Motor_Num];
-int rm_unbound_position[Motor_Num];
-bounding_helper rm_bounding_helper[Motor_Num];
-
-PID shooterx_pos_pid = PID(1, 0, 0, 0, 0, 0);
-int shooterx_target_pos = 0;
-
-PID shootery_pos_pid = PID(1, 0, 0, 0, 0, 0);
-int shootery_target_pos = 0;
-
-int shooterx_debug_speed_log = 0;
-int shootery_debug_speed_log = 0;
+#define GROUP1_MOTOR_COUNT 2
+RMM3508Motor group1_rm[GROUP1_MOTOR_COUNT] = {RMM3508Motor(0, POS_PID_MODE), RMM3508Motor(1, POS_PID_MODE)};
 
 void sendRMMotorCurrent() {
-  for (int i = 0; i < 2; i++) {
-    tx_msg.data.byte[i * 2] = rm_output[i] >> 8;
-    tx_msg.data.byte[i * 2 + 1] = rm_output[i];
+  tx_msg.id = 0x200;
+  tx_msg.length = 8;
+
+  for (int i = 0; i < GROUP1_MOTOR_COUNT; i++) {
+    short output = group1_rm[i].get_output();
+    tx_msg.data.byte[i * 2] = output >> 8;
+    tx_msg.data.byte[i * 2 + 1] = output;
   }
 
   Can0.sendFrame(tx_msg);
@@ -46,17 +37,19 @@ DECLARE_WATCHER(JsonObject, shooter_setting, "rs.s",
   JsonVariant sx = value["sx"]["pid"];
   JsonVariant sy = value["sy"]["pid"];
 
-  shooterx_pos_pid._pimpl->_max = sx["max"] | 0.0;
-  shooterx_pos_pid._pimpl->_min = sx["min"] | 0.0;
-  shooterx_pos_pid._pimpl->_Kp = sx["p"] | 0.0;
-  shooterx_pos_pid._pimpl->_Kd = sx["d"] | 0.0;
-  shooterx_pos_pid._pimpl->_Ki = sx["i"] | 0.0;
+  PIDImpl* sx_pid = group1_rm[0].pos_pid;
+  sx_pid->_max = sx["max"] | 0.0;
+  sx_pid->_min = sx["min"] | 0.0;
+  sx_pid->_Kp = sx["p"] | 0.0;
+  sx_pid->_Kd = sx["d"] | 0.0;
+  sx_pid->_Ki = sx["i"] | 0.0;
 
-  shootery_pos_pid._pimpl->_max = sy["max"] | 0.0;
-  shootery_pos_pid._pimpl->_min = sy["min"] | 0.0;
-  shootery_pos_pid._pimpl->_Kp = sy["p"] | 0.0;
-  shootery_pos_pid._pimpl->_Kd = sy["d"] | 0.0;
-  shootery_pos_pid._pimpl->_Ki = sy["i"] | 0.0;
+  PIDImpl* sy_pid = group1_rm[1].pos_pid;
+  sy_pid->_max = sy["max"] | 0.0;
+  sy_pid->_min = sy["min"] | 0.0;
+  sy_pid->_Kp = sy["p"] | 0.0;
+  sy_pid->_Kd = sy["d"] | 0.0;
+  sy_pid->_Ki = sy["i"] | 0.0;
 
   static int count = 0;
   console << "updated pid" << count++;
@@ -84,8 +77,8 @@ DECLARE_WATCHER(JsonObject, shooter_output, "rs.o",
   int x = value["sx"]["pos"].as<int>();
   int y = value["sy"]["pos"].as<int>();
 
-  shooterx_target_pos = x;
-  shootery_target_pos = y;
+  group1_rm[0].target_tick = x;
+  group1_rm[1].target_tick = y;
 
   // static int count = 0;
   // console << "shooter updated " << count++;
@@ -107,9 +100,6 @@ void setup() {
   START_WATCHER(shooter_output);
 
   Can0.begin(CAN_BPS_1000K);  //  For communication with RM motors
-
-  tx_msg.id = 0x200;
-  tx_msg.length = 8;
 
   gb.setup();
 
@@ -133,24 +123,18 @@ void loop2() {  // Send sensors / encoders data
   gb.write("rg.f", gen_feedback);
 
   StaticJsonDocument<128> shooter_feedback;
-  shooter_feedback["sx"]["pos"] = rm_unbound_position[0];
-  shooter_feedback["sx"]["sp"] = rm_speed[0];
-  shooter_feedback["sx"]["out"] = shooterx_debug_speed_log;
-  shooter_feedback["sy"]["pos"] = rm_unbound_position[1];
-  shooter_feedback["sy"]["sp"] = rm_speed[1];
-  shooter_feedback["sy"]["out"] = shootery_debug_speed_log;
+  shooter_feedback["sx"]["pos"] = group1_rm[0].unbound_tick;
+  shooter_feedback["sx"]["sp"] = group1_rm[0].speed;
+  shooter_feedback["sx"]["out"] = group1_rm[0].output;
+  shooter_feedback["sy"]["pos"] = group1_rm[1].unbound_tick;
+  shooter_feedback["sy"]["sp"] = group1_rm[1].speed;
+  shooter_feedback["sy"]["out"] = group1_rm[1].output;
 
   gb.write("rs.f", shooter_feedback);
 }
 
 void loop3() {  // PID Calculation
   int result;
-
-  result = shooterx_pos_pid.calculate(shooterx_target_pos, rm_unbound_position[0]);
-  rm_output[0] = shooterx_debug_speed_log = result;
-
-  result = shootery_pos_pid.calculate(shootery_target_pos, rm_unbound_position[1]);
-  rm_output[1] = shootery_debug_speed_log = result;
 
   sendRMMotorCurrent();
 }
@@ -160,10 +144,7 @@ void loop() {
   Can0.watchFor();
   Can0.read(rx_msg);
 
-  int motor_idx = rx_msg.id - 0x201;
-  int gearbox_pos = rx_msg.data.byte[0] << 8 | rx_msg.data.byte[1];
-  rm_unbound_position[motor_idx] = rm_bounding_helper[motor_idx](gearbox_pos);
-
-  //feedback
-  rm_speed[rx_msg.id - 0x201] = rx_msg.data.byte[2] << 8 | rx_msg.data.byte[3];
+  for (int i = 0; i < GROUP1_MOTOR_COUNT; i++) {
+    if (group1_rm[i].handle_packet(rx_msg.id, rx_msg.data.byte)) break;
+  }
 }

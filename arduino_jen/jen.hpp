@@ -57,6 +57,9 @@ class Globals {
 
   template <typename TValue>
   bool write(String path, const TValue val) {
+    // not ready yet
+    if (jen::deviceName == "") return false;
+
     // Changing all channels is not allowed
     if (path.length() == 0) return false;
 

@@ -21,11 +21,12 @@ from types import ModuleType
 import globals as gb
 import workers
 
-from core.tools import WorkerController
+from core.tools import *
 
 
 if __name__ == '__main__':
     try:
+        logger.info("List all available serial ports:")
         [print(p.serial_number, str(p) ) for p in list(serial.tools.list_ports.comports())]
 
         processes: dict[str, Process] = {}
@@ -50,10 +51,10 @@ if __name__ == '__main__':
             time.sleep(0.2)
 
     except KeyboardInterrupt:
-        print('Keyboard interrupt')
+        logger.info("Main process keyboard interrupted")
     finally:
         [processes[name].kill() for name in processes]
 
-        print('Program exit')
+        logger.info("Program exit")
 
         exit()

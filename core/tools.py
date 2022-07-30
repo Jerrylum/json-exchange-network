@@ -1,4 +1,5 @@
 
+import logging
 import threading
 import time
 
@@ -69,16 +70,57 @@ class WorkerController:
         from core.usb_serial import SerialConnectionManager
 
         self.name = name
+        self.displayName = ''.join(word.title() for word in name.split('_'))
         self.serial_manager = SerialConnectionManager(self)
         self.shared_data = shared_data
+
+        logger.info("Worker \"%s\" registered" % self.displayName)
 
     def init(self):
         gb.share = self.shared_data
         gb.current_worker = self
 
-    def use_clock(self, frequency: int, busyWait=False, offset=0.0004):
-        self._clock = Clock(frequency, busyWait, offset)
+        logger.name = self.displayName
+
+        logger.info("Worker started")
+
+    def use_clock(self, frequency: int, busy_wait=False, offset=0.0004):
+        self._clock = Clock(frequency, busy_wait, offset)
 
     def spin(self):
         self.serial_manager.spin()
         self._clock.spin()
+
+
+class CustomFormatter(logging.Formatter):
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    format1 = "[%(asctime)s] - [%(name)s/%(levelname)s]" + reset + ": %(message)s"
+
+    FORMATS = {
+        logging.DEBUG: grey + format1 + reset,
+        logging.INFO: grey + format1 + reset,
+        logging.WARNING: yellow + format1 + reset,
+        logging.ERROR: red + format1 + reset,
+        logging.CRITICAL: bold_red + format1 + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt, "%s.%03d" % ("%H:%M:%S", record.msecs))
+        return formatter.format(record)
+
+    def getLoggerHandler():
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(CustomFormatter())
+        return handler
+
+
+logger = logging.getLogger("Main")
+logger.name
+logger.setLevel(logging.DEBUG)
+logger.addHandler(CustomFormatter.getLoggerHandler())
