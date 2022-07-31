@@ -18,6 +18,11 @@ def run(worker: WorkerController):
     gen_output = gb.read("rg.o")
     shooter_output = gb.read("rs.o")
 
+    # import msgpack
+    # print(msgpack.packb(dict(gb.read("rg"))))
+    # print(gb.read("rh.0"))
+    # print(gb.read(""))
+
     while True:
         if isBtnJustPressed(RIGHT_L):
             gen_output[0] = not gen_output[0]

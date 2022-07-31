@@ -37,6 +37,10 @@ def init(manager: SyncManager):
 def read(path: str):
     data = share
     try:
+        if path == '':
+            return {path: gb.read(path) for path in data if not path.startswith('_')}
+        elif '.' not in path:
+            return dict(data[path]) if hasattr(data[path], 'keys') else list(data[path])
         for key in path.split('.'):
             data = data[int(key)] if key.isdigit() else data[key]
         return data

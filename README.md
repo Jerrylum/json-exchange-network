@@ -20,7 +20,7 @@
 Used packages / libraries:
 ```
 In Python
-using: crc8, cobs, msgpack-python
+using: crc8, cobs, msgpack-python, websockets
 
 In Arduino
 due_can, Task Scheduler (by Kai Liebich & Georg Icking-Konert), hideakitai/MsgPack, hideakitai/Packetizer, ArduinoJson, ArxContainer

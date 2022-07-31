@@ -20,19 +20,6 @@ CAN_FRAME tx_msg, rx_msg;
 #define GROUP1_MOTOR_COUNT 2
 RMM3508Motor group1_rm[GROUP1_MOTOR_COUNT] = {RMM3508Motor(0, POS_PID_MODE), RMM3508Motor(1, POS_PID_MODE)};
 
-void sendRMMotorCurrent() {
-  tx_msg.id = 0x200;
-  tx_msg.length = 8;
-
-  for (int i = 0; i < GROUP1_MOTOR_COUNT; i++) {
-    short output = group1_rm[i].get_output();
-    tx_msg.data.byte[i * 2] = output >> 8;
-    tx_msg.data.byte[i * 2 + 1] = output;
-  }
-
-  Can0.sendFrame(tx_msg);
-}
-
 DECLARE_WATCHER(JsonObject, shooter_setting, "rs.s",
   JsonVariant sx = value["sx"]["pid"];
   JsonVariant sy = value["sy"]["pid"];
@@ -134,9 +121,16 @@ void loop2() {  // Send sensors / encoders data
 }
 
 void loop3() {  // PID Calculation
-  int result;
+  tx_msg.id = 0x200;
+  tx_msg.length = 8;
 
-  sendRMMotorCurrent();
+  for (int i = 0; i < GROUP1_MOTOR_COUNT; i++) {
+    short output = group1_rm[i].get_output();
+    tx_msg.data.byte[i * 2] = output >> 8;
+    tx_msg.data.byte[i * 2 + 1] = output;
+  }
+
+  Can0.sendFrame(tx_msg);
 }
 
 // the loop function runs over and over again forever, runs ~14000 times per second

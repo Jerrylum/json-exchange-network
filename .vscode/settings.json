@@ -24,6 +24,7 @@
         "opcontrol",
         "packb",
         "pygame",
-        "unpackb"
+        "unpackb",
+        "websockets"
     ]
 }

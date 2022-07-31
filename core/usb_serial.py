@@ -1,4 +1,4 @@
-from typing import Union, Callable, Tuple, Any, cast
+
 
 import io
 import serial
@@ -8,117 +8,14 @@ import threading
 import os
 import traceback
 
-import crc8
-import msgpack
-from cobs import cobs
 from core.device import *
+from core.protocol import *
 from core.tools import *
 from serial.tools.list_ports_common import ListPortInfo
 from consts import *
 
 
 import globals as gb
-
-PkgIdxType = Union[int, bytes]
-
-PORT_BLACKLIST = ["/dev/ttyAMA0", "COM1"]
-
-# https://gitlab.com/-/ide/project/advian-oss/python-msgpacketizer/tree/master/-/src/msgpacketizer/packer.py/
-
-
-def normalize_pkgidx(pkgidx: PkgIdxType) -> bytes:
-    """Normalize pkgidx to bytes"""
-    if not isinstance(pkgidx, (int, bytes)):
-        raise ValueError("pkgidx must be int (0-255) or byte")
-    if isinstance(pkgidx, int):
-        pkgidx = bytes([pkgidx])
-    if len(pkgidx) != 1:
-        raise ValueError("pkgidx must be exactly one byte")
-    return pkgidx
-
-
-def pack(pkgidx: PkgIdxType, datain: bytes) -> bytes:  # pylint: disable=E1136
-    """Pack into msgpacketizer compatible binary, does not include the field separator null byte"""
-    pkgidx = normalize_pkgidx(pkgidx)
-    check = crc8.crc8()
-    check.update(datain)
-    return cast(bytes, cobs.encode(pkgidx + datain + check.digest()))
-
-
-def unpack(bytesin: bytes) -> Tuple[int, Any]:
-    """unpack from msgpacketizer binary, can deal with the trailing/preceding null byte if needed"""
-    if bytesin[0] == 0:
-        bytesin = bytesin[1:]
-    if bytesin[-1] == 0:
-        bytesin = bytesin[:-1]
-    decoded = cobs.decode(bytesin)
-    idx = decoded[0]
-    pktcrc = decoded[-1]
-    data = decoded[1:-1]
-    check = crc8.crc8()
-    check.update(data)
-    expectedcrc = check.digest()[0]
-    if expectedcrc != pktcrc:
-        raise ValueError("packet checksum {} does not match expected {}".format(pktcrc, expectedcrc))
-    return (idx, data)
-
-
-class Packet:
-    data: bytes
-
-    def __init__(self, data: bytes):
-        self.data = data
-
-
-class DeviceBoundPacket(Packet):
-    def __init__(self, data: bytes):
-        super().__init__(pack(self.PACKET_ID, data))
-
-
-class DeviceIdentityH2DPacket(DeviceBoundPacket):
-    PACKET_ID = 1
-
-    def __init__(self, device_path: str):
-        payload = bytes(device_path, "ascii") + bytes([0])
-
-        super().__init__(payload)
-
-
-class DataPatchH2DPacket(DeviceBoundPacket):
-    PACKET_ID = 3
-
-    def __init__(self, path: str, send: any):
-        payload = bytes(path, "ascii") + bytes([0]) + msgpack.packb(send)
-
-        super().__init__(payload)
-
-
-class HostBoundPacket(Packet):
-    pass
-
-
-class DataPatchD2HPacket(HostBoundPacket):
-    PACKET_ID = 2
-
-    def __init__(self, dataAfterCobs: bytes):
-        super().__init__(dataAfterCobs)
-
-        for i in range(0, len(dataAfterCobs)):
-            if dataAfterCobs[i] == 0:
-                self.path = dataAfterCobs[:i].decode("ascii")
-                self.receive = msgpack.unpackb(
-                    dataAfterCobs[i + 1:], use_list=True, encoding='ascii')
-                break
-
-
-class DebugMessageD2HPacket(HostBoundPacket):
-    PACKET_ID = 4
-
-    def __init__(self, dataAfterCobs: bytes):
-        super().__init__(dataAfterCobs)
-
-        self.message = dataAfterCobs.decode("ascii")
-
 
 class PortInfo:
     device: str = None
@@ -161,11 +58,11 @@ class SerialConnection(RemoteDevice):
             try:
                 time.sleep(0.5)
 
-                self.write(DeviceIdentityH2DPacket(self.name))
+                self.write(DeviceIdentityH2DPacket().encode(self.name))
                 gb.write("device." + self.name + ".available", True)
-                manager.update_device_info()
+                self.manager.update_device_info()
                 self.init = True
-                logger.info("Serial device %s connected" % self.name)
+                logger.info("Serial device %s initialized" % self.name)
 
                 while self.open:
                     buf = int(self.s.read(1)[0])
@@ -175,7 +72,7 @@ class SerialConnection(RemoteDevice):
                     if buf == 0:
                         self.read(bytes(self.serial_rx[0: self.serial_rx_index]))
                         self.serial_rx_index = 0
-            except Exception as e:
+            except:
                 logger.error("Error in \"%s\" read thread" % self.name, exc_info=True)
                 self.manager.disconnect(self.name)
 
@@ -187,7 +84,7 @@ class SerialConnection(RemoteDevice):
         gb.write("device." + self.name, {"available": False, "type": "serial", "watch": []})
 
     def watch_update(self, path: str, val):
-        self.write(DataPatchH2DPacket(path, val))
+        self.write(DataPatchH2DPacket().encode(path, val))
 
     def write(self, packet: DeviceBoundPacket):
         # print("send bytes", packet.data + bytes([0]))
@@ -201,7 +98,7 @@ class SerialConnection(RemoteDevice):
 
             packet_class = [p for p in [DataPatchD2HPacket, DebugMessageD2HPacket] if p.PACKET_ID == packet_id][0]
 
-            packet = packet_class(data)
+            packet = packet_class().decode(data)
 
             if packet_class is DataPatchD2HPacket:
                 old_watchers = False
@@ -216,7 +113,7 @@ class SerialConnection(RemoteDevice):
                 if old_watchers is not False:
                     diff_watchers = set(gb.read(packet.path)) - set(old_watchers)
                     for watcher in diff_watchers:
-                        self.write(DataPatchH2DPacket(watcher,  gb.read(watcher)))
+                        self.write(DataPatchH2DPacket().encode(watcher, gb.read(watcher)))
                     
                     self.manager.update_device_info()
 
@@ -224,7 +121,7 @@ class SerialConnection(RemoteDevice):
                 # print("f", time.perf_counter())
                 print("Arduino: {}".format(packet.message))  # TODO
 
-        except BaseException as e:
+        except BaseException:
             print("error buffer", buf)
             logger.error("Error in \"%s\" read thread" % self.name, exc_info=True)
 
