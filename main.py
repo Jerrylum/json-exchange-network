@@ -53,7 +53,8 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logger.info("Main process keyboard interrupted")
     finally:
-        [processes[name].kill() for name in processes]
+        logger.info("Killing workers")
+        [p.kill() for p in processes.values()] 
 
         logger.info("Program exit")
 

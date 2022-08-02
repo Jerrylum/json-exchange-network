@@ -58,6 +58,9 @@ class SerialConnection(RemoteDevice):
             try:
                 time.sleep(0.5)
 
+                while self.s.inWaiting() > 0: # IMPORTANT: Clear the buffer before reading
+                    buf = self.s.read(self.s.inWaiting())
+
                 self.write(DeviceIdentityH2DPacket().encode(self.name))
                 gb.write("device." + self.name + ".available", True)
                 self.manager.update_device_info()
@@ -89,7 +92,7 @@ class SerialConnection(RemoteDevice):
     def write(self, packet: DeviceBoundPacket):
         # print("send bytes", packet.data + bytes([0]))
         with self.write_lock:
-            print("Packet size:", len(packet.data))
+            # print("Packet size:", len(packet.data))
             self.s.write(packet.data + bytes([0]))
 
     def read(self, buf: bytes):
@@ -119,6 +122,7 @@ class SerialConnection(RemoteDevice):
 
             if packet_class is DebugMessageD2HPacket:
                 # print("f", time.perf_counter())
+                # print("Arduino: {} {}".format(packet.message, time.perf_counter()))  # TODO
                 print("Arduino: {}".format(packet.message))  # TODO
 
         except BaseException:
@@ -176,8 +180,11 @@ class SerialConnectionManager:
 
     def disconnect(self, name: str):
         if name in self._worker._devices and type(self._worker._devices[name]) is SerialConnection:
-            self._worker._devices[name].close()
-            del self._worker._devices[name]
+            try: # XXX: ignoring race condition
+                self._worker._devices[name].close()
+                del self._worker._devices[name]     
+            except:
+                pass     
             self.update_device_info()
             logger.warning("Serial device %s disconnected" % name)
 
@@ -188,12 +195,17 @@ class SerialConnectionManager:
 
         def sync_thread():
             condition: threading.Condition = gb.share['__diff_condition__']
-            while True:
+            while self.started:
                 with condition:
                     condition.wait()
                     self.sync()
 
         threading.Thread(target=sync_thread).start()
+
+    def stop_listening(self):
+        self.started = False
+
+        [self.disconnect(k) for k in list(self._worker._devices.keys())]
 
     def spin(self):
         if self.started and time.perf_counter() - self.last_connect_attempt > 1:

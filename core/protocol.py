@@ -77,6 +77,7 @@ class DeviceIdentityH2DPacket(DeviceBoundPacket):
         self.device_path = payload.decode("ascii")[:-1]
         return super().decode(payload)
 
+# import time
 
 class DataPatchH2DPacket(DeviceBoundPacket):
     PACKET_ID = 3
@@ -84,6 +85,9 @@ class DataPatchH2DPacket(DeviceBoundPacket):
     def encode(self, path: str, send: any):
         self.path = path
         self.send = send
+
+        # if path == "rg.o":
+        #     print("send", time.perf_counter())
 
         payload = bytes(path, "ascii") + bytes([0]) + msgpack.packb(send)
         return super().encode(payload)

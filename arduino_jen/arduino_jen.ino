@@ -57,7 +57,8 @@ DECLARE_WATCHER(JsonArray, gen_output, "rg.o",
   digitalWrite(AIR_PLATFORM_DOWN, platform ? HIGH : LOW);
 
   static int count = 0;
-  console << "updated " << count++;
+  // console << "updated " << count++;
+  console << count++;
 )
 
 DECLARE_WATCHER(JsonArray, shooter_output, "rs.o",
