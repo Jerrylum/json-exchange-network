@@ -1,19 +1,19 @@
 
-## JSON Structure
+## Latency
 
-```json
+Proccess to proccess latency 0.6ms to 0.8ms
 
-// ASCII only
-// never start with an underscore
-
-// __diff__
-[
-    "robot.shooterx.target_pos",
-    "robot.shooterx.now_pos"
-]
+## Packet
 
 ```
+Client > Hello
+Server > Data Patch ( All Data )
+Server > Device Identify
+Client > Data Patch ( Gateway information )
 
+...
+
+```
 
 ## Requirement
 

@@ -19,6 +19,8 @@ def axis(val: float):
 def run(worker: WorkerController):
     worker.init()
 
+    gb.connect_server(("0.0.0.0", 7984))
+
     pygame.init()
 
     while True:

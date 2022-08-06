@@ -7,6 +7,7 @@ DO NOT AUTO-FORMAT THIS FILE
 import sys
 sys.path.insert(1, './') # XXX: to be able to import modules on project directory; this should be before other imports
 
+import signal
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 # to allow tk window to be shown when the command is executed from terminal
@@ -16,6 +17,7 @@ if 'DISPLAY' not in os.environ:
 import time
 import serial.tools.list_ports
 from multiprocessing import Manager, Process
+from multiprocessing.process import current_process
 from types import ModuleType
 
 import globals as gb
@@ -31,7 +33,7 @@ if __name__ == '__main__':
 
         processes: dict[str, Process] = {}
 
-        gb.init(Manager())
+        gb.init()
 
         for name in workers.__dict__:
             worker = workers.__dict__[name]
@@ -49,13 +51,14 @@ if __name__ == '__main__':
                     'pid': processes[name].pid
                 } for name in processes })
             time.sleep(0.2)
-
     except KeyboardInterrupt:
         logger.info("Main process keyboard interrupted")
+    except BaseException:
+        logger.exception("Exception in main process", exc_info=True)
     finally:
         logger.info("Killing workers")
         [p.kill() for p in processes.values()] 
 
         logger.info("Program exit")
 
-        exit()
+        os._exit(0)

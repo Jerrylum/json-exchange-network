@@ -7,6 +7,8 @@ import globals as gb
 
 def run(worker: WorkerController):
     worker.init()
+
+    gb.connect_server(("0.0.0.0", 7984))
     
     # print("{} {} {} {} {}".format(
     #     isBtnPressing(RIGHT_U),
@@ -29,4 +31,8 @@ def run(worker: WorkerController):
     # ))
 
     # time.sleep(5)
+    while True:
+        # print("w2", gb.read(""))
+        time.sleep(1)
+
     pass

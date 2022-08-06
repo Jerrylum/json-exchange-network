@@ -60,6 +60,26 @@ class Packet:
         return self
 
 
+class DataPatchPacket(Packet):
+    PACKET_ID = 5
+
+    def encode(self, path: str, change: any):
+        self.path = path
+        self.change = change
+
+        # if path == "rg.o":
+        #     print("send", time.perf_counter())
+
+        payload = bytes(path, "ascii") + bytes([0]) + msgpack.packb(change)
+        return super().encode(payload)
+
+    def decode(self, payload: bytes):
+        end = payload.find(0)
+        self.path = payload[:end].decode("ascii")
+        self.change = msgpack.unpackb(payload[end + 1:], use_list=True, encoding='ascii')
+        return self
+
+
 class DeviceBoundPacket(Packet):
     pass
 
@@ -112,7 +132,6 @@ class DataPatchD2HPacket(HostBoundPacket):
 
         payload = bytes(path, "ascii") + bytes([0]) + msgpack.packb(receive)
 
-        print("payload", payload)
         return super().encode(payload)
 
     def decode(self, payload: bytes):
@@ -135,3 +154,13 @@ class DebugMessageD2HPacket(HostBoundPacket):
     def decode(self, payload: bytes):
         self.message = payload.decode("ascii")[:-1]
         return self
+
+
+class HelloD2HPacket(HostBoundPacket):
+    PACKET_ID = 6
+
+    def encode(self):
+        return super().encode(bytes([0]))
+
+    def decode(self, payload: bytes):
+        return super().decode(payload)

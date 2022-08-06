@@ -68,6 +68,7 @@ rg: # robot_general
 device: {
   # (name):
   #   available: boolean
+  #   display_name: str
   #   type: serial/websocket
   #   watch:
   #   - uuid: str

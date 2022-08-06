@@ -10,7 +10,7 @@ import time
 def run(worker: WorkerController):
     worker.init()
 
-    gb.write('opcontrol.keyboard.keys', {})
+    gb.connect_server(("0.0.0.0", 7984))
 
     attention = {}
 

@@ -1,70 +1,56 @@
 import threading
+from typing import Optional
 import uuid
 import yaml
 import os
-
-from multiprocessing.managers import SyncManager, process
-from multiprocessing.process import current_process
+import socket
+import threading
+import time
+import uuid
 
 import consts
 
+from core.protocol import *
 from core.tools import *
+from core.gateway import *
+from core.udp import *
+
+diff_queue = [Diff.placeholder()] * consts.DIFF_QUEUE_SIZE
+sync_condition = threading.Condition()
 
 share: any = None
 current_worker: WorkerController = None
-
-def init(manager: SyncManager):
-    global share
-    share = {}
-
-    initial_yml_file = os.path.dirname(os.path.realpath(__file__)) + "/initial.yml"
-    with open(initial_yml_file, "r", encoding="utf-8") as stream:
-        try:
-            initial = yaml.safe_load(stream)
-            for k in initial:
-                anything = initial[k]
-                share[k] = manager.dict(anything) if isinstance(anything, dict) else manager.list(anything)
-        except:
-            logger.critical("Failed to load initial.yml", exc_info=True)
-            raise
-
-    share['__diff__'] = manager.list([{"uuid": 0, "path": "ignored"}] * consts.DIFF_QUEUE_SIZE)
-    share['__diff_condition__'] = manager.Condition()
-
-    print('Share network initialized. ', manager.address, current_process().authkey)
-
+gateways: list[Gateway] = []
+early_gateways: list[Gateway] = []
 
 def read(path: str):
     data = share
     try:
-        if path == '':
-            return {path: gb.read(path) for path in data if not path.startswith('_')}
-        elif '.' not in path:
-            return dict(data[path]) if hasattr(data[path], 'keys') else list(data[path])
-        for key in path.split('.'):
+        if path == "":
+            return {path: gb.read(path) for path in data if not path.startswith("_")}
+        for key in path.split("."):
             data = data[int(key)] if key.isdigit() else data[key]
         return data
     except:
         return None
 
 
-def write(path: str, val: any):
-    nodes = path.split('.')
-    if len(nodes) <= 1:
-        # Changing all channels is not allowed
-        raise KeyError('Changing the root key is not allowed')
+def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=None):
+    global share
+
+    nodes = path.split(".")
 
     def doRobot(parent, cn):
-        if not hasattr(parent, '__getitem__'):
+        if not hasattr(parent, "__getitem__"):
             raise KeyError('Trying to subscribe but parent is not a list or dict. On path "%s" via "%s"' % (
-                path, '.'.join(cn)))
+                path, ".".join(cn)))
 
         current = cn[0]
         make_current = False
-        if hasattr(parent, 'append'):  # is list
+        if hasattr(parent, "append"):  # is list
             if not current.isdigit():
                 raise KeyError('The parent is a list but key is not a number. On path "%s" via "%s"' % (
-                    path, '.'.join(cn)))
+                    path, ".".join(cn)))
             current = int(current)
             if not current < len(parent):
                 parent.extend([None] * (current - len(parent) + 1))
@@ -88,22 +74,47 @@ def write(path: str, val: any):
     if read(path) == val:
         return
 
-    diff = {"uuid": uuid.uuid4().int >> (128 - 32), "path": path}
+    diff = Diff.build(path, val)
+    packet = DataPatchPacket().encode(path, val)
 
-    if current_worker is not None:
-        current_worker.serial_manager._sync_exact_match(diff, val)
+    if early_sync:
+        [g._sync_exact_match(diff, packet, early=True) for g in early_gateways]
 
-    doRobot(share[nodes[0]], nodes[1:])
+    if origin is not None:
+        origin.ignored_diff_id.add(diff.uuid)
+    
+    if path == "":
+        share = val
+        print("global overwrite")
+    else:
+        doRobot(share, nodes)
 
-    if not path.startswith('_') and '._' not in path:
-        # race condition might occur
-        # XXX: ignored
-        diffs: list = share['__diff__']
-        diffs.append(diff)
-        diffs.pop(0)
-        condition: threading.Condition = share['__diff_condition__']
-        with condition:
-            condition.notify_all()
+    # XXX: TODO: race condition might occur
+    diff_queue.append(diff)
+    diff_queue.pop(0)
 
-        if current_worker is not None:
-            current_worker.serial_manager._sync_related(diff)
+    with sync_condition:
+        sync_condition.notify_all()
+
+
+def init():
+    global share
+
+    initial_yml_file = os.path.dirname(os.path.realpath(__file__)) + "/initial.yml"
+    with open(initial_yml_file, "r", encoding="utf-8") as stream:
+        try:
+            share = yaml.safe_load(stream)
+        except:
+            logger.critical("Failed to load initial.yml", exc_info=True)
+            raise
+
+
+    server = UDPServer()
+    server.start_listening()
+    gateways.append(server)
+
+
+def connect_server(addr: Address):
+    client = UDPClient(addr)
+    client.start()
+    gateways.append(client)

@@ -2,11 +2,15 @@
 import logging
 import threading
 import time
+import uuid
+
+import consts
 
 import globals as gb
 
 from core.device import RemoteDevice
 
+Address = tuple[str, int]
 
 def start_thread(method):
     threading.Thread(target=method).start()
@@ -63,24 +67,32 @@ class WorkerController:
     _clock: Clock = None
 
     name: str = None
-    serial_manager = None
+    display_name: str = None
+    # serial_manager = None
     shared_data = None
 
     def __init__(self, name: str, shared_data: dict):
-        from core.usb_serial import SerialConnectionManager
+        # from core.usb_serial import SerialConnectionManager
 
         self.name = name
-        self.displayName = ''.join(word.title() for word in name.split('_'))
-        self.serial_manager = SerialConnectionManager(self)
+        self.display_name = ''.join(word.title() for word in name.split('_'))
+        # self.serial_manager = SerialConnectionManager(self)
         self.shared_data = shared_data
 
-        logger.info("Worker \"%s\" registered" % self.displayName)
+        logger.info("Worker \"%s\" registered" % self.display_name)
+
+        # fh = logging.FileHandler('latest-%s.log' % name)
+        # fh.setLevel(logging.DEBUG)
+        # logger.addHandler(fh)
 
     def init(self):
+        gb.sync_condition = threading.Condition()
         gb.share = self.shared_data
         gb.current_worker = self
+        gb.early_gateways = []
+        gb.gateways = []
 
-        logger.name = self.displayName
+        logger.name = self.display_name
 
         logger.info("Worker started")
 
@@ -88,8 +100,42 @@ class WorkerController:
         self._clock = Clock(frequency, busy_wait, offset)
 
     def spin(self):
-        self.serial_manager.spin()
+        # self.serial_manager.spin()
         self._clock.spin()
+
+
+class Diff:
+
+    def __init__(self, uuid: int, path: str, change: any):
+        self.uuid: int = uuid
+        self.path: str = path
+        self.change = change
+
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.uuid == other.uuid
+        else:
+            return False
+
+    def __hash__(self):
+        return self.uuid
+
+    def match(self, path: str):
+        return self.path == path or path == "*" or (path.endswith(".*") and self.path.startswith(path[:-2]))
+
+    def related(self, path: str):
+        return path.startswith(self.path) or self.path.startswith(path)
+
+    def placeholder():
+        return Diff(0, "__placeholder__", None)
+
+    def build(path: str, change: any):
+        return Diff(uuid.uuid4().int >> (128 - 32), path, change)
+
+
+class DiffOrigin:
+    def __init__(self):
+        self.ignored_diff_id: set[int] = set()
 
 
 class CustomFormatter(logging.Formatter):
@@ -115,7 +161,7 @@ class CustomFormatter(logging.Formatter):
 
     def getLoggerHandler():
         handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(logging.INFO)
         handler.setFormatter(CustomFormatter())
         return handler
 
@@ -124,3 +170,6 @@ logger = logging.getLogger("Main")
 logger.name
 logger.setLevel(logging.DEBUG)
 logger.addHandler(CustomFormatter.getLoggerHandler())
+fh = logging.FileHandler('latest.log')
+fh.setLevel(logging.DEBUG)
+logger.addHandler(fh)
