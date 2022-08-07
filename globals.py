@@ -34,7 +34,7 @@ def read(path: str):
         return None
 
 
-def read_copy(path: str):
+def clone(path: str):
     return copy.deepcopy(read(path))
 
 
@@ -79,10 +79,7 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=Non
 
     diff = Diff.build(path, val)
     if early_sync:
-        packet = DataPatchPacket().encode(path, val)
-
-        if len(early_gateways) == 1:
-            print("e", time.perf_counter())
+        packet = DiffPacket().encode(path, val)
         [g._sync_exact_match(diff, packet, early=True) for g in early_gateways]
 
     if origin is not None:

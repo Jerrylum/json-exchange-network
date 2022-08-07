@@ -31,26 +31,27 @@ class PortInfo:
         return True
 
 
-class SerialConnection(GatewayConnection, Gateway):
+class SerialConnection(GatewayClientLike, Gateway):
 
     def __init__(self, path: str, manager: any):
-        GatewayConnection.__init__(self)
+        GatewayClientLike.__init__(self)
         Gateway.__init__(self)
 
         self.conn_id = str(uuid.uuid4())[:8]
         self.device_path = path
         self.manager = manager
+        self.diff_packet_type = DiffPacket
 
     def read(self, in_raw: bytes):
         packet_id, data = unpack(in_raw)
 
-        packet_class = [p for p in [DataPatchPacket, DebugMessageD2HPacket] if p.PACKET_ID == packet_id][0]
+        packet_class = [p for p in [DiffPacket, DebugMessageC2SPacket] if p.PACKET_ID == packet_id][0]
 
         packet = packet_class().decode(data)
 
-        if packet_class is DataPatchPacket:
-            if ("device." + self.conn_id + ".watch").startswith(packet.path):
-                watcher_path = "device." + self.conn_id + ".watch"
+        if packet_class is DiffPacket:
+            if ("conn." + self.conn_id + ".watch").startswith(packet.path):
+                watcher_path = "conn." + self.conn_id + ".watch"
                 old_watchers = gb.read(watcher_path) or []
 
                 gb.write(packet.path, packet.change)
@@ -58,11 +59,12 @@ class SerialConnection(GatewayConnection, Gateway):
                 self.watching = gb.read(watcher_path) or []
                 diff_watchers = set(self.watching) - set(old_watchers)
                 for watcher in diff_watchers:
-                    self.write(DataPatchPacket().encode(watcher, gb.read(watcher)))
+                    self.write(DiffPacket().encode(watcher, gb.read(watcher)))
             else:
                 gb.write(packet.path, packet.change)
-        elif packet_class is DebugMessageD2HPacket:
-            print("Arduino: {} {}".format(packet.message, time.perf_counter()))  # TODO
+        elif packet_class is DebugMessageC2SPacket:
+            # print("Arduino: {} {}".format(packet.message, time.perf_counter()))  # TODO
+            logger.debug("Receive: %f" % time.perf_counter())
             # print("Arduino: {}".format(packet.message))  # TODO
 
         if self.state == 0:
@@ -94,7 +96,7 @@ class SerialConnection(GatewayConnection, Gateway):
 
                 logger.info("Send Identity to \"%s\" gateway" % self.conn_id)
 
-                self.write(DeviceIdentityH2DPacket().encode(self.conn_id))
+                self.write(GatewayIdentityC2SPacket().encode(self.conn_id))
 
                 while self.started:
                     buf = int(self.s.read(1)[0])
@@ -113,17 +115,11 @@ class SerialConnection(GatewayConnection, Gateway):
                 logger.error("Error in \"%s\" read thread" % self.conn_id, exc_info=True)
                 self.manager.disconnect(self)
 
-        def sync_thread():
-            while self.started:
-                with gb.sync_condition:
-                    gb.sync_condition.wait()
-                self._sync()
-        
         threading.Thread(target=read_thread).start()
-        threading.Thread(target=sync_thread).start()
+        threading.Thread(target=self._sync_thread).start()
 
 
-class SerialConnectionManager:
+class SerialConnectionManager(GatewayManager):
 
     def __init__(self, worker: WorkerController):
         self._worker = worker

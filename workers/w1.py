@@ -17,8 +17,8 @@ def run(worker: WorkerController):
 
     gb.connect_server(("0.0.0.0", 7984))
 
-    gen_output = gb.read_copy("rg.o")
-    shooter_output = gb.read_copy("rs.o")
+    gen_output = gb.clone("rg.o")
+    shooter_output = gb.clone("rs.o")
 
     while True:
         if isBtnJustPressed(RIGHT_L):

@@ -2,6 +2,8 @@ from typing import Union, Callable, Tuple, Any, cast
 
 import crc8
 import msgpack
+import marshal
+import gc
 from cobs import cobs
 
 PkgIdxType = Union[int, bytes]
@@ -60,15 +62,12 @@ class Packet:
         return self
 
 
-class DataPatchPacket(Packet):
+class DiffPacket(Packet):
     PACKET_ID = 3
 
     def encode(self, path: str, change: any):
         self.path = path
         self.change = change
-
-        # if path == "rg.o":
-        #     print("send", time.perf_counter())
 
         payload = bytes(path, "ascii") + bytes([0]) + msgpack.packb(change)
         return super().encode(payload)
@@ -76,15 +75,36 @@ class DataPatchPacket(Packet):
     def decode(self, payload: bytes):
         end = payload.find(0)
         self.path = payload[:end].decode("ascii")
-        self.change = msgpack.unpackb(payload[end + 1:], use_list=True, encoding='ascii')
+        self.change = msgpack.unpackb(payload[end + 1:], use_list=True)
         return self
 
 
-class DeviceBoundPacket(Packet):
+class MarshalDiffPacket(Packet):
+    PACKET_ID = 5
+
+    def encode(self, path: str, change: any):
+        self.path = path
+        self.change = change
+
+        # if path == "rg.o":
+        #     print("send", time.perf_counter())
+        gc.disable()
+        payload = bytes(path, "ascii") + bytes([0]) + marshal.dumps(change)
+        # gc.enable()
+        return super().encode(payload)
+
+    def decode(self, payload: bytes):
+        end = payload.find(0)
+        self.path = payload[:end].decode("ascii")
+        self.change = marshal.loads(payload[end + 1:])
+        return self
+
+
+class ClientBoundPacket(Packet):
     pass
 
 
-class DeviceIdentityH2DPacket(DeviceBoundPacket):
+class GatewayIdentityC2SPacket(ClientBoundPacket):
     PACKET_ID = 2
 
     def encode(self, conn_id: str):
@@ -98,11 +118,11 @@ class DeviceIdentityH2DPacket(DeviceBoundPacket):
         return super().decode(payload)
 
 
-class HostBoundPacket(Packet):
+class ServerBoundPacket(Packet):
     pass
 
 
-class DebugMessageD2HPacket(HostBoundPacket):
+class DebugMessageC2SPacket(ServerBoundPacket):
     PACKET_ID = 4
 
     def encode(self, message: str):
@@ -116,7 +136,7 @@ class DebugMessageD2HPacket(HostBoundPacket):
         return self
 
 
-class HelloD2HPacket(HostBoundPacket):
+class HelloC2SPacket(ServerBoundPacket):
     PACKET_ID = 1
 
     def encode(self):

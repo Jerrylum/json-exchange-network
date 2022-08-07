@@ -29,15 +29,15 @@ class WebsocketConnection(RemoteDevice):
         self.init = False
         self.ws = ws
         self.event_loop = asyncio.get_event_loop()
-        gb.write("device." + self.name, {"available": False, "type": "serial", "watch": []})
+        gb.write("conn." + self.name, {"available": False, "type": "serial", "watch": []})
         self.open = True
 
     async def connection_job(self):
         try:
             time.sleep(0.5)
 
-            self.write(DeviceIdentityH2DPacket().encode(self.name))
-            gb.write("device." + self.name + ".available", True)
+            self.write(GatewayIdentityC2SPacket().encode(self.name))
+            gb.write("conn." + self.name + ".available", True)
             self.manager.update_device_info()
             self.init = True
             logger.info("Websocket device %s initialized" % self.name)
@@ -52,7 +52,7 @@ class WebsocketConnection(RemoteDevice):
     async def _close(self):
         self.open = False
         await self.ws.close()
-        gb.write("device." + self.name, {"available": False, "type": "serial", "watch": []})
+        gb.write("conn." + self.name, {"available": False, "type": "serial", "watch": []})
 
 
     def close(self):
@@ -61,26 +61,26 @@ class WebsocketConnection(RemoteDevice):
     def watch_update(self, path: str, val):
         self.write(DataPatchH2DPacket().encode(path, val))
 
-    async def _write(self, packet: DeviceBoundPacket):
+    async def _write(self, packet: ClientBoundPacket):
         # print("send bytes", packet.data + bytes([0]))
         with self.write_lock:
             await self.ws.send(packet.data)
 
-    def write(self, packet: DeviceBoundPacket):
+    def write(self, packet: ClientBoundPacket):
         asyncio.run_coroutine_threadsafe(self._write(packet), loop=self.event_loop)
 
     def read(self, buf: bytes):
         try:
             packet_id, data = unpack(buf)
 
-            packet_class = [p for p in [DataPatchD2HPacket, DebugMessageD2HPacket] if p.PACKET_ID == packet_id][0]
+            packet_class = [p for p in [DataPatchD2HPacket, DebugMessageC2SPacket] if p.PACKET_ID == packet_id][0]
 
             packet = packet_class().decode(data)
 
             if packet_class is DataPatchD2HPacket:
                 old_watchers = False
 
-                if packet.path == "device." + self.name + ".watch":
+                if packet.path == "conn." + self.name + ".watch":
                     old_watchers = gb.read(packet.path) or []
 
                 # print("received size", len(buf))
@@ -94,7 +94,7 @@ class WebsocketConnection(RemoteDevice):
                     
                     self.manager.update_device_info()
 
-            if packet_class is DebugMessageD2HPacket:
+            if packet_class is DebugMessageC2SPacket:
                 # print("f", time.perf_counter())
                 print("Website: {}".format(packet.message))  # TODO
 

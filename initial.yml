@@ -64,11 +64,11 @@ rg: # robot_general
   - 0 # sensor1
   - 0 # sensor2
 
-device: {
+conn: {
   # (name):
   #   available: boolean
   #   [display_name]: str
-  #   type: tty/websocket
+  #   type: udp/tty/websocket
   #   watch:
   #   - uuid: str
   #     path: str

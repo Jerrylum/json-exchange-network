@@ -32,7 +32,6 @@ def run(worker: WorkerController):
 
     # time.sleep(5)
     while True:
-        # print("w2", gb.read(""))
         time.sleep(1)
 
     pass

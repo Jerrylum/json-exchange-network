@@ -87,7 +87,7 @@ class Globals {
         send.add(emitter.listeners[i]->getEventName());
       }
     }
-    write("device." + conn_id + ".watch", send);
+    write("conn." + conn_id + ".watch", send);
   }
   
   inline void watch(String path, void (*cb)(JsonVariant t)) {

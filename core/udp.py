@@ -12,10 +12,10 @@ from core.gateway import *
 
 import globals as gb
 
-class UDPConnection(GatewayConnection):
+class UDPConnection(GatewayClientLike):
 
     def __init__(self, addr: Address, server: any):
-        GatewayConnection.__init__(self)
+        GatewayClientLike.__init__(self)
 
         self.conn_id = str(uuid.uuid4())[:8]
         self.addr = addr
@@ -25,25 +25,25 @@ class UDPConnection(GatewayConnection):
         packet_id, data = unpack(in_raw)
 
         if self.state == 0:
-            available_packets = [HelloD2HPacket]
+            available_packets = [HelloC2SPacket]
         elif self.state == 1:
-            available_packets = [HelloD2HPacket, DataPatchPacket, DebugMessageD2HPacket]
+            available_packets = [HelloC2SPacket, DiffPacket, MarshalDiffPacket, DebugMessageC2SPacket]
         packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0] # TODO: error point
 
         packet = packet_class().decode(data)
 
-        if packet_class is HelloD2HPacket:
+        if packet_class is HelloC2SPacket:
             logger.info("Send Identity to \"%s\" gateway" % self.conn_id)
 
-            self.write(DataPatchPacket().encode("", gb.read("")))
-            self.write(DeviceIdentityH2DPacket().encode(self.conn_id))
+            self.write(DiffPacket().encode("", gb.read("")))
+            self.write(GatewayIdentityC2SPacket().encode(self.conn_id))
             self.watching = []
             self.state = 1
-        elif packet_class is DataPatchPacket:
+        elif packet_class is DiffPacket or packet_class is MarshalDiffPacket:
             gb.write(packet.path, packet.change, False, self)
 
-            if ("device." + self.conn_id + ".watch").startswith(packet.path):
-                self.watching = gb.read("device." + self.conn_id + ".watch") or []
+            if ("conn." + self.conn_id + ".watch").startswith(packet.path):
+                self.watching = gb.read("conn." + self.conn_id + ".watch") or []
 
     def write(self, packet: Packet):
         self.server.s.sendto(packet.data, self.addr)
@@ -84,20 +84,14 @@ class UDPServer(GatewayServerLike, Gateway):
                     print("error buffer", in_raw)
                     logger.error("Error in server read thread", exc_info=True)
 
-        def server_sync_thread():
-            while self.started:
-                with gb.sync_condition:
-                    gb.sync_condition.wait()
-                self._sync()
-
         threading.Thread(target=server_thread).start()
-        threading.Thread(target=server_sync_thread).start()
+        threading.Thread(target=self._sync_thread).start()
 
 
-class UDPClient(GatewayConnection, Gateway):
+class UDPClient(GatewayClientLike, Gateway):
 
     def __init__(self, addr: Address):
-        GatewayConnection.__init__(self)
+        GatewayClientLike.__init__(self)
         Gateway.__init__(self)
 
         self.s: socket.socket = None
@@ -107,29 +101,27 @@ class UDPClient(GatewayConnection, Gateway):
     def read(self, in_raw: bytes):
         packet_id, data = unpack(in_raw)
 
-        available_packets = [DeviceIdentityH2DPacket, DataPatchPacket]
+        available_packets = [GatewayIdentityC2SPacket, DiffPacket, MarshalDiffPacket]
         packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]
 
 
         packet = packet_class().decode(data)
 
-        if packet_class is DeviceIdentityH2DPacket and self.state == 0:
+        if packet_class is GatewayIdentityC2SPacket and self.state == 0:
             self.conn_id = packet.conn_id
             self.state = 1
             logger.info("Registered \"%s\" gateway", self.conn_id)
 
-            gb.write("device." + self.conn_id, {
+            gb.write("conn." + self.conn_id, {
                 "available": True,
                 "worker_name": gb.current_worker.display_name if gb.current_worker else "(unknown)",
                 "type": "udp",
                 "watch": self.watching
             })
-        elif packet_class is DataPatchPacket:
+        elif packet_class is DiffPacket or packet_class is MarshalDiffPacket:
             gb.write(packet.path, packet.change, False, self)
     
     def write(self, packet: Packet):
-        # if type(packet) is DataPatchPacket:
-        #     print(gb.current_worker.display_name if gb.current_worker else "(unknown)", packet.change)
         self.s.sendto(packet.data, self.server_addr)
 
     def start(self):
@@ -146,7 +138,7 @@ class UDPClient(GatewayConnection, Gateway):
             while self.started:
                 while self.state == 0:
                     try:
-                        self.write(HelloD2HPacket().encode())
+                        self.write(HelloC2SPacket().encode())
 
                         in_raw, _ = s.recvfrom(2048)
                         self.read(in_raw) # Data Patch
@@ -167,12 +159,5 @@ class UDPClient(GatewayConnection, Gateway):
                     print("error buffer", in_raw)
                     logger.error("Error in \"%s\" read thread" % self.conn_id, exc_info=True)
 
-        def client_sync_thread():
-            while self.started:
-                with gb.sync_condition:
-                    gb.sync_condition.wait()
-                self._sync()
-
-
         threading.Thread(target=client_read_thread).start()
-        threading.Thread(target=client_sync_thread).start()
+        threading.Thread(target=self._sync_thread).start()

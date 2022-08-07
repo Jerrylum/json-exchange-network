@@ -6,7 +6,7 @@ from core.tools import *
 import globals as gb
 
 
-class GatewayConnection(DiffOrigin):
+class GatewayClientLike(DiffOrigin):
 
     def __init__(self):
         DiffOrigin.__init__(self)
@@ -38,7 +38,7 @@ class GatewayConnection(DiffOrigin):
 class GatewayServerLike:
 
     def __init__(self):
-        self.connections: dict[any, GatewayConnection] = {}
+        self.connections: dict[any, GatewayClientLike] = {}
 
     def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
         [self.connections[k]._sync_exact_match(diff, packet, False) for k in list(self.connections)]
@@ -51,6 +51,7 @@ class Gateway(DiffOrigin):
 
         self.last_handled_diff_id: int = 0
         self.started: bool = False
+        self.diff_packet_type = MarshalDiffPacket
 
     def _filter_final_sync(self) -> list[Diff]:
         all_diffs = gb.diff_queue
@@ -78,8 +79,15 @@ class Gateway(DiffOrigin):
 
     def _sync(self):
         for f in self._filter_final_sync(): # TODO
-            packet = DataPatchPacket().encode(f.path, f.change)
+            packet = self.diff_packet_type().encode(f.path, f.change)
             self._sync_exact_match(f, packet)
+
+    def _sync_thread(self):
+        while self.started:
+            with gb.sync_condition:
+                gb.sync_condition.wait()
+            self._sync()
+
 
 class GatewayManager:
     
