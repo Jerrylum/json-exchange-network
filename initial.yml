@@ -3,7 +3,6 @@
 
 # This is the initial state and overview of the network.
 # All keys must be ASCII strings and must not start with an underscore.
-# Each root key represents a channel in the network, and therefore, it must be a map.
 
 opcontrol:
   joystick:
@@ -68,8 +67,8 @@ rg: # robot_general
 device: {
   # (name):
   #   available: boolean
-  #   display_name: str
-  #   type: serial/websocket
+  #   [display_name]: str
+  #   type: tty/websocket
   #   watch:
   #   - uuid: str
   #     path: str

@@ -3,16 +3,28 @@
 
 Proccess to proccess latency 0.6ms to 0.8ms
 
-## Packet
+## Protocol
+
+### Packet
+
+TODO
+
+### Normal Mode
 
 ```
 Client > Hello
 Server > Data Patch ( All Data )
 Server > Device Identify
 Client > Data Patch ( Gateway information )
-
 ...
+```
 
+### Passive Mode
+
+```
+Server > Device Identify
+Client > Data Patch ( Gateway information )
+...
 ```
 
 ## Requirement

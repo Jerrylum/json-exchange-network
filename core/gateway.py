@@ -13,7 +13,7 @@ class GatewayConnection(DiffOrigin):
 
         self.watching: list[str] = ["*"]
 
-        self.name: str = "(unknown)"
+        self.conn_id: str = "(unknown)"
         self.state: int = 0  # 0 = Registering, 1 = Running
 
     def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
@@ -42,11 +42,6 @@ class GatewayServerLike:
 
     def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
         [self.connections[k]._sync_exact_match(diff, packet, False) for k in list(self.connections)]
-
-    def _sync(self):
-        for f in self._filter_final_sync():
-            packet = DataPatchPacket().encode(f.path, f.change)
-            self._sync_exact_match(f, packet)
 
 
 class Gateway(DiffOrigin):
@@ -82,6 +77,11 @@ class Gateway(DiffOrigin):
         pass
 
     def _sync(self):
-        for f in self._filter_final_sync():
+        for f in self._filter_final_sync(): # TODO
             packet = DataPatchPacket().encode(f.path, f.change)
             self._sync_exact_match(f, packet)
+
+class GatewayManager:
+    
+    def spin(self):
+        pass

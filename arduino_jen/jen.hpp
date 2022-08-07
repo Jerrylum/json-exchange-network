@@ -33,7 +33,7 @@ namespace jen {
 
 extern EventEmitter<JsonVariant> emitter;
 
-extern String deviceName;
+extern String conn_id;
 
 inline String readNTBS(STL_UINT8_VECTOR data, int& idx) {
   String result = "";
@@ -58,7 +58,7 @@ class Globals {
   template <typename TValue>
   bool write(String path, const TValue val) {
     // not ready yet
-    if (jen::deviceName == "") return false;
+    if (jen::conn_id == "") return false;
 
     // Changing all channels is not allowed
     if (path.length() == 0) return false;
@@ -77,7 +77,7 @@ class Globals {
     path.getBytes(send, path_size);
     serializeMsgPack(data, &send[path_size], data_size);
 
-    Packetizer::send(Serial, 2, send, path_size + data_size);
+    Packetizer::send(Serial, 3, send, path_size + data_size);
   }
 
   inline void sync() {
@@ -87,12 +87,12 @@ class Globals {
         send.add(emitter.listeners[i]->getEventName());
       }
     }
-    write("device." + deviceName + ".watch", send);
+    write("device." + conn_id + ".watch", send);
   }
   
   inline void watch(String path, void (*cb)(JsonVariant t)) {
     emitter.addListener(path.c_str(), cb);
-    if (deviceName != "") sync();
+    if (conn_id != "") sync();
   }
 };
 

@@ -7,7 +7,6 @@ DO NOT AUTO-FORMAT THIS FILE
 import sys
 sys.path.insert(1, './') # XXX: to be able to import modules on project directory; this should be before other imports
 
-import signal
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 # to allow tk window to be shown when the command is executed from terminal

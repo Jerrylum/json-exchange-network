@@ -61,7 +61,7 @@ class Packet:
 
 
 class DataPatchPacket(Packet):
-    PACKET_ID = 5
+    PACKET_ID = 3
 
     def encode(self, path: str, change: any):
         self.path = path
@@ -85,61 +85,21 @@ class DeviceBoundPacket(Packet):
 
 
 class DeviceIdentityH2DPacket(DeviceBoundPacket):
-    PACKET_ID = 1
+    PACKET_ID = 2
 
-    def encode(self, device_path: str):
-        self.device_path = device_path
+    def encode(self, conn_id: str):
+        self.conn_id = conn_id
 
-        payload = bytes(device_path, "ascii") + bytes([0])
+        payload = bytes(conn_id, "ascii") + bytes([0])
         return super().encode(payload)
 
     def decode(self, payload: bytes):
-        self.device_path = payload.decode("ascii")[:-1]
+        self.conn_id = payload.decode("ascii")[:-1]
         return super().decode(payload)
-
-# import time
-
-class DataPatchH2DPacket(DeviceBoundPacket):
-    PACKET_ID = 3
-
-    def encode(self, path: str, send: any):
-        self.path = path
-        self.send = send
-
-        # if path == "rg.o":
-        #     print("send", time.perf_counter())
-
-        payload = bytes(path, "ascii") + bytes([0]) + msgpack.packb(send)
-        return super().encode(payload)
-
-    def decode(self, payload: bytes):
-        end = payload.find(0)
-        self.path = payload[:end].decode("ascii")
-        self.send = msgpack.unpackb(payload[end + 1:], use_list=True, encoding='ascii')
-        return self
 
 
 class HostBoundPacket(Packet):
     pass
-
-
-class DataPatchD2HPacket(HostBoundPacket):
-    PACKET_ID = 2
-
-    def encode(self, path: str, receive: any):
-        self.path = path
-        self.receive = receive
-
-        payload = bytes(path, "ascii") + bytes([0]) + msgpack.packb(receive)
-
-        return super().encode(payload)
-
-    def decode(self, payload: bytes):
-        end = payload.find(0)
-        self.path = payload[:end].decode("ascii")
-        self.receive = msgpack.unpackb(payload[end + 1:], use_list=True, encoding='ascii')
-
-        return self
 
 
 class DebugMessageD2HPacket(HostBoundPacket):
@@ -157,7 +117,7 @@ class DebugMessageD2HPacket(HostBoundPacket):
 
 
 class HelloD2HPacket(HostBoundPacket):
-    PACKET_ID = 6
+    PACKET_ID = 1
 
     def encode(self):
         return super().encode(bytes([0]))

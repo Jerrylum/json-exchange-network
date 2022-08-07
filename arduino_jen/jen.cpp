@@ -7,7 +7,7 @@ int serial_rx_index;
 
 EventEmitter<JsonVariant> emitter;
 
-String deviceName = "";
+String conn_id = "";
 
 // this can not be an inline method because of "internal compiler error: in strip_typedefs, at cp/tree.c:1295"
 void Globals::loop() {
@@ -20,11 +20,18 @@ void Globals::loop() {
 
       int idx = 0;
 
-      if (p_out.index == 1) {
-        jen::deviceName = readNTBS(data, idx);
+      if (p_out.index == 2) {
+        jen::conn_id = readNTBS(data, idx);
+
+        StaticJsonDocument<JSON_DOC_SIZE> data;
+        data["available"] = true;
+        data["type"] = "tty";
+        data.createNestedArray("watch");
+        write("device", data);
+
         sync();
 
-        consolePrint("Registered name " + deviceName);
+        consolePrint("Registered id " + conn_id);
       } else if (p_out.index == 3) {
         StaticJsonDocument<JSON_DOC_SIZE> cache;
         

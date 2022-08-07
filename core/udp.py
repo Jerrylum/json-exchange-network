@@ -1,8 +1,4 @@
-from sys import exc_info
-import threading
 import uuid
-import yaml
-import os
 import socket
 import threading
 import time
@@ -21,7 +17,7 @@ class UDPConnection(GatewayConnection):
     def __init__(self, addr: Address, server: any):
         GatewayConnection.__init__(self)
 
-        self.name = str(uuid.uuid4())[:8]
+        self.conn_id = str(uuid.uuid4())[:8]
         self.addr = addr
         self.server = server
 
@@ -37,20 +33,19 @@ class UDPConnection(GatewayConnection):
         packet = packet_class().decode(data)
 
         if packet_class is HelloD2HPacket:
-            print("Send Identity", self.name, time.perf_counter())
+            logger.info("Send Identity to \"%s\" gateway" % self.conn_id)
+
             self.write(DataPatchPacket().encode("", gb.read("")))
-            self.write(DeviceIdentityH2DPacket().encode(self.name))
+            self.write(DeviceIdentityH2DPacket().encode(self.conn_id))
             self.watching = []
             self.state = 1
         elif packet_class is DataPatchPacket:
             gb.write(packet.path, packet.change, False, self)
 
-            if ("device." + self.name + ".watch").startswith(packet.path):
-                self.watching = gb.read("device." + self.name + ".watch") or []
+            if ("device." + self.conn_id + ".watch").startswith(packet.path):
+                self.watching = gb.read("device." + self.conn_id + ".watch") or []
 
     def write(self, packet: Packet):
-        # if type(packet) is DataPatchPacket:
-        #     print(gb.current_worker.display_name if gb.current_worker else "(unknown)", self.name, packet.change)
         self.server.s.sendto(packet.data, self.addr)
 
 
@@ -112,21 +107,18 @@ class UDPClient(GatewayConnection, Gateway):
     def read(self, in_raw: bytes):
         packet_id, data = unpack(in_raw)
 
-        if self.state == 0:
-            available_packets = [DeviceIdentityH2DPacket, DataPatchPacket]
-        elif self.state == 1:
-            available_packets = [DeviceIdentityH2DPacket, DataPatchPacket]
+        available_packets = [DeviceIdentityH2DPacket, DataPatchPacket]
         packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]
 
 
         packet = packet_class().decode(data)
 
         if packet_class is DeviceIdentityH2DPacket and self.state == 0:
-            self.name = packet.device_path
+            self.conn_id = packet.conn_id
             self.state = 1
-            logger.info("Registered \"%s\" gateway", self.name)
+            logger.info("Registered \"%s\" gateway", self.conn_id)
 
-            gb.write("device." + self.name, {
+            gb.write("device." + self.conn_id, {
                 "available": True,
                 "worker_name": gb.current_worker.display_name if gb.current_worker else "(unknown)",
                 "type": "udp",
@@ -161,7 +153,7 @@ class UDPClient(GatewayConnection, Gateway):
                         in_raw, _ = s.recvfrom(2048)
                         self.read(in_raw) # Device Identify
 
-                        s.settimeout(None)
+                        s.settimeout(None) # TODO
                     except:
                         logger.warning("Error in UDP client hello")
                         pass
@@ -170,10 +162,10 @@ class UDPClient(GatewayConnection, Gateway):
                     in_raw, _ = s.recvfrom(2048)
                     self.read(in_raw)
                 except IndexError:
-                    logger.error("Error in \"%s\" read thread, wrong state %d" % (self.name, self.state))
+                    logger.error("Error in \"%s\" read thread, wrong state %d" % (self.conn_id, self.state))
                 except:
                     print("error buffer", in_raw)
-                    logger.error("Error in \"%s\" read thread" % self.name, exc_info=True)
+                    logger.error("Error in \"%s\" read thread" % self.conn_id, exc_info=True)
 
         def client_sync_thread():
             while self.started:

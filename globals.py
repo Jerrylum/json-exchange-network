@@ -1,9 +1,8 @@
 import threading
 from typing import Optional
-import uuid
 import yaml
 import os
-import socket
+import copy
 import threading
 import time
 import uuid
@@ -33,6 +32,10 @@ def read(path: str):
         return data
     except:
         return None
+
+
+def read_copy(path: str):
+    return copy.deepcopy(read(path))
 
 
 def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=None):
@@ -75,9 +78,11 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=Non
         return
 
     diff = Diff.build(path, val)
-    packet = DataPatchPacket().encode(path, val)
-
     if early_sync:
+        packet = DataPatchPacket().encode(path, val)
+
+        if len(early_gateways) == 1:
+            print("e", time.perf_counter())
         [g._sync_exact_match(diff, packet, early=True) for g in early_gateways]
 
     if origin is not None:

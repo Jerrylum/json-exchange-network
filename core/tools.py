@@ -2,15 +2,16 @@
 import logging
 import threading
 import time
+from typing import Optional
 import uuid
 
 import consts
 
 import globals as gb
 
-from core.device import RemoteDevice
 
 Address = tuple[str, int]
+
 
 def start_thread(method):
     threading.Thread(target=method).start()
@@ -63,45 +64,44 @@ class TpsCounter:
 
 
 class WorkerController:
-    _devices: dict[str, RemoteDevice] = {}
-    _clock: Clock = None
-
-    name: str = None
-    display_name: str = None
-    # serial_manager = None
-    shared_data = None
 
     def __init__(self, name: str, shared_data: dict):
-        # from core.usb_serial import SerialConnectionManager
+        from core.gateway import GatewayManager
 
         self.name = name
         self.display_name = ''.join(word.title() for word in name.split('_'))
-        # self.serial_manager = SerialConnectionManager(self)
         self.shared_data = shared_data
+        self.managers: list[GatewayManager] = []
+        self.clock: Optional[Clock] = None
 
         logger.info("Worker \"%s\" registered" % self.display_name)
-
-        # fh = logging.FileHandler('latest-%s.log' % name)
-        # fh.setLevel(logging.DEBUG)
-        # logger.addHandler(fh)
 
     def init(self):
         gb.sync_condition = threading.Condition()
         gb.share = self.shared_data
         gb.current_worker = self
-        gb.early_gateways = []
         gb.gateways = []
+        gb.early_gateways = []
 
         logger.name = self.display_name
 
         logger.info("Worker started")
 
     def use_clock(self, frequency: int, busy_wait=False, offset=0.0004):
-        self._clock = Clock(frequency, busy_wait, offset)
+        self.clock = Clock(frequency, busy_wait, offset)
+        return self.clock
+
+    def use_serial_manager(self):
+        from core.tty import SerialConnectionManager
+
+        m = SerialConnectionManager(self)
+        self.managers.append(m)
+        return m
 
     def spin(self):
-        # self.serial_manager.spin()
-        self._clock.spin()
+        [m.spin() for m in self.managers]
+        if self.clock is not None:
+            self.clock.spin()
 
 
 class Diff:
@@ -170,6 +170,6 @@ logger = logging.getLogger("Main")
 logger.name
 logger.setLevel(logging.DEBUG)
 logger.addHandler(CustomFormatter.getLoggerHandler())
-fh = logging.FileHandler('latest.log')
-fh.setLevel(logging.DEBUG)
-logger.addHandler(fh)
+# fh = logging.FileHandler('latest.log')
+# fh.setLevel(logging.DEBUG)
+# logger.addHandler(fh)
