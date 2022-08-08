@@ -41,6 +41,9 @@ def clone(path: str):
 def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=None):
     global share
 
+    if "*" in path:
+        raise KeyError("Wildcard not allowed in path")
+
     nodes = path.split(".")
 
     def doRobot(parent, cn):
@@ -99,7 +102,7 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=Non
         sync_condition.notify_all()
 
 
-def init():
+def init(addr: Address):
     global share
 
     initial_yml_file = os.path.dirname(os.path.realpath(__file__)) + "/initial.yml"
@@ -111,7 +114,7 @@ def init():
             raise
 
 
-    server = UDPServer()
+    server = UDPServer(addr)
     server.start_listening()
     gateways.append(server)
 

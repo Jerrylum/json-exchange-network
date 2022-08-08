@@ -123,7 +123,7 @@ class Diff:
         return self.uuid
 
     def match(self, path: str):
-        return self.path == path or path == "*" or (path.endswith(".*") and self.path.startswith(path[:-2]))
+        return self.path == path or (path.endswith("*") and self.path.startswith(path[:-1]))
 
     def related(self, path: str):
         return path.startswith(self.path) or self.path.startswith(path)

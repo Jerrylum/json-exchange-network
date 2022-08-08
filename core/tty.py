@@ -32,56 +32,30 @@ class PortInfo:
         return True
 
 
-class SerialConnection(GatewayClientLike, Gateway):
+class SerialConnection(UpstreamRole, Gateway):
 
     def __init__(self, path: str, manager: any):
-        GatewayClientLike.__init__(self)
+        ClientLikeRole.__init__(self)
         Gateway.__init__(self)
 
-        self.conn_id = str(uuid.uuid4())[:8]
+        self.conn_id = "TTY-" + str(uuid.uuid4())[:8]
         self.device_path = path
         self.manager = manager
         self.diff_packet_type = DiffPacket
-
-    def read(self, in_raw: bytes):
-        packet_id, data = unpack(in_raw)
-
-        packet_class = [p for p in [DiffPacket, DebugMessageC2SPacket] if p.PACKET_ID == packet_id][0]
-
-        packet = packet_class().decode(data)
-
-        if packet_class is DiffPacket:
-            if ("conn." + self.conn_id + ".watch").startswith(packet.path):
-                watcher_path = "conn." + self.conn_id + ".watch"
-                old_watchers = gb.read(watcher_path) or []
-
-                gb.write(packet.path, packet.change)
-
-                self.watching = gb.read(watcher_path) or []
-                diff_watchers = set(self.watching) - set(old_watchers)
-                for watcher in diff_watchers:
-                    self.write(DiffPacket().encode(watcher, gb.read(watcher)))
-            else:
-                gb.write(packet.path, packet.change)
-        elif packet_class is DebugMessageC2SPacket:
-            print(CustomFormatter.green + packet.message + CustomFormatter.reset, end="")  # TODO
-
-        if self.state == 0:
-            self.state = 1
-            logger.info("Gateway \"%s\" registered" % self.conn_id)
 
     def write(self, packet: Packet):
         with self.write_lock:
             self.s.write(packet.data + bytes([0]))
 
     def start(self):
-        self.start_at = time.perf_counter()
+        if self.started:
+            return
+        self.started = True
+
         self.s = serial.Serial(port=self.device_path, baudrate=115200)
         self.write_lock = threading.Lock()
         self.serial_rx = [0] * 2048
         self.serial_rx_index = 0
-
-        self.started = True
 
         # Passive Mode
 
@@ -95,7 +69,7 @@ class SerialConnection(GatewayClientLike, Gateway):
 
                 logger.info("Send Identity to \"%s\" gateway" % self.conn_id)
 
-                self.write(GatewayIdentityC2SPacket().encode(self.conn_id))
+                self.write(GatewayIdentityU2DPacket().encode(self.conn_id))
 
                 while self.started:
                     buf = int(self.s.read(1)[0])

@@ -3,7 +3,6 @@ from typing import Union, Callable, Tuple, Any, cast
 import crc8
 import msgpack
 import marshal
-import gc
 from cobs import cobs
 
 PkgIdxType = Union[int, bytes]
@@ -86,11 +85,7 @@ class MarshalDiffPacket(Packet):
         self.path = path
         self.change = change
 
-        # if path == "rg.o":
-        #     print("send", time.perf_counter())
-        gc.disable()
         payload = bytes(path, "ascii") + bytes([0]) + marshal.dumps(change)
-        # gc.enable()
         return super().encode(payload)
 
     def decode(self, payload: bytes):
@@ -100,11 +95,11 @@ class MarshalDiffPacket(Packet):
         return self
 
 
-class ClientBoundPacket(Packet):
+class DownstreamBoundPacket(Packet):
     pass
 
 
-class GatewayIdentityC2SPacket(ClientBoundPacket):
+class GatewayIdentityU2DPacket(DownstreamBoundPacket):
     PACKET_ID = 2
 
     def encode(self, conn_id: str):
@@ -118,11 +113,11 @@ class GatewayIdentityC2SPacket(ClientBoundPacket):
         return super().decode(payload)
 
 
-class ServerBoundPacket(Packet):
+class UpstreamBoundPacket(Packet):
     pass
 
 
-class DebugMessageC2SPacket(ServerBoundPacket):
+class DebugMessageD2UPacket(UpstreamBoundPacket):
     PACKET_ID = 4
 
     def encode(self, message: str):
@@ -136,7 +131,7 @@ class DebugMessageC2SPacket(ServerBoundPacket):
         return self
 
 
-class HelloC2SPacket(ServerBoundPacket):
+class HelloD2UPacket(UpstreamBoundPacket):
     PACKET_ID = 1
 
     def encode(self):

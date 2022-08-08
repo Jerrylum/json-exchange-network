@@ -6,12 +6,12 @@ from core.tools import *
 import globals as gb
 
 
-class GatewayClientLike(DiffOrigin):
+class ClientLikeRole(DiffOrigin):
 
     def __init__(self):
         DiffOrigin.__init__(self)
 
-        self.watching: list[str] = ["*"]
+        self.watching: list[str] = ["", "*"]
 
         self.conn_id: str = "(unknown)"
         self.state: int = 0  # 0 = Registering, 1 = Running
@@ -35,10 +35,76 @@ class GatewayClientLike(DiffOrigin):
         pass
 
 
-class GatewayServerLike:
+class UpstreamRole(ClientLikeRole):
 
     def __init__(self):
-        self.connections: dict[any, GatewayClientLike] = {}
+        ClientLikeRole.__init__(self)
+
+    def read(self, in_raw: bytes):
+        packet_id, data = unpack(in_raw)
+
+        available_packets = [HelloD2UPacket, DiffPacket, MarshalDiffPacket, DebugMessageD2UPacket]
+        packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]
+
+        packet = packet_class().decode(data)
+
+        if packet_class is HelloD2UPacket:
+            logger.info("Send Identity to \"%s\" gateway" % self.conn_id)
+
+            self.write(GatewayIdentityU2DPacket().encode(self.conn_id))
+        elif packet_class is DiffPacket or packet_class is MarshalDiffPacket:
+            if ("conn." + self.conn_id + ".watch").startswith(packet.path):
+                watcher_path = "conn." + self.conn_id + ".watch"
+                old_watchers = gb.read(watcher_path) or []
+
+                gb.write(packet.path, packet.change, False, self)
+
+                self.watching = gb.read(watcher_path) or []
+                diff_watchers = set(self.watching) - set(old_watchers)
+                for watcher in diff_watchers:
+                    if not watcher.endswith("*"):
+                        self.write(DiffPacket().encode(watcher, gb.read(watcher)))
+            else:
+                gb.write(packet.path, packet.change, False, self)
+        elif packet_class is DebugMessageD2UPacket:
+            print(CustomFormatter.green + packet.message + CustomFormatter.reset, end="")  # TODO
+
+        if self.state == 0 and packet_class is not HelloD2UPacket:
+            self.state = 1
+
+
+class DownstreamRole(ClientLikeRole):
+
+    def __init__(self):
+        ClientLikeRole.__init__(self)
+
+    def read(self, in_raw: bytes):
+        packet_id, data = unpack(in_raw)
+
+        available_packets = [GatewayIdentityU2DPacket, DiffPacket, MarshalDiffPacket]
+        packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]
+
+        packet = packet_class().decode(data)
+
+        if packet_class is GatewayIdentityU2DPacket and self.state == 0:
+            self.conn_id = packet.conn_id
+            self.state = 1
+            logger.info("Registered \"%s\" gateway", self.conn_id)
+
+            gb.write("conn." + self.conn_id, {
+                "available": True,
+                "worker_name": gb.current_worker.display_name if gb.current_worker else "(unknown)",
+                "type": "udp",
+                "watch": self.watching
+            })
+        elif packet_class is DiffPacket or packet_class is MarshalDiffPacket:
+            gb.write(packet.path, packet.change, False, self)
+
+
+class ServerLikeRole:
+
+    def __init__(self):
+        self.connections: dict[any, UpstreamRole] = {}
 
     def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
         [self.connections[k]._sync_exact_match(diff, packet, False) for k in list(self.connections)]

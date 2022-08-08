@@ -1,6 +1,8 @@
 #include <Tasks.h>
 #include <due_can.h>
 
+#define INO_FILE
+
 #include "jen.hpp"
 
 #include "pid.hpp"

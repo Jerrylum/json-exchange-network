@@ -36,7 +36,7 @@ class WebsocketConnection(RemoteDevice):
         try:
             time.sleep(0.5)
 
-            self.write(GatewayIdentityC2SPacket().encode(self.name))
+            self.write(GatewayIdentityU2DPacket().encode(self.name))
             gb.write("conn." + self.name + ".available", True)
             self.manager.update_device_info()
             self.init = True
@@ -61,19 +61,19 @@ class WebsocketConnection(RemoteDevice):
     def watch_update(self, path: str, val):
         self.write(DataPatchH2DPacket().encode(path, val))
 
-    async def _write(self, packet: ClientBoundPacket):
+    async def _write(self, packet: DownstreamBoundPacket):
         # print("send bytes", packet.data + bytes([0]))
         with self.write_lock:
             await self.ws.send(packet.data)
 
-    def write(self, packet: ClientBoundPacket):
+    def write(self, packet: DownstreamBoundPacket):
         asyncio.run_coroutine_threadsafe(self._write(packet), loop=self.event_loop)
 
     def read(self, buf: bytes):
         try:
             packet_id, data = unpack(buf)
 
-            packet_class = [p for p in [DataPatchD2HPacket, DebugMessageC2SPacket] if p.PACKET_ID == packet_id][0]
+            packet_class = [p for p in [DataPatchD2HPacket, DebugMessageD2UPacket] if p.PACKET_ID == packet_id][0]
 
             packet = packet_class().decode(data)
 
@@ -94,7 +94,7 @@ class WebsocketConnection(RemoteDevice):
                     
                     self.manager.update_device_info()
 
-            if packet_class is DebugMessageC2SPacket:
+            if packet_class is DebugMessageD2UPacket:
                 # print("f", time.perf_counter())
                 print("Website: {}".format(packet.message))  # TODO
 

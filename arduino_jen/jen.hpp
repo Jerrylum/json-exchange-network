@@ -36,7 +36,6 @@
 
 #include "event_emitter.hpp"
 
-
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////CONSOLE/////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -45,7 +44,7 @@ namespace jen {
 
 class Console {};
 
-};  // namespace jen
+}
 
 static jen::Console console;
 
@@ -57,7 +56,7 @@ inline jen::Console& operator<<(jen::Console& stream, T arg) {
 
   Packetizer::send(Serial, 4, plain, message.length() + 1);
   return stream;
-};
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////MAIN BODY///////////////////////////////////////////////////
@@ -70,9 +69,6 @@ DECLARE_GLOBAL_VARIABLE(int, serial_rx_index, = 0);
 DECLARE_GLOBAL_VARIABLE(EventEmitter<JsonVariant>, emitter, );
 DECLARE_GLOBAL_VARIABLE(String, conn_id, = "");
 
-// static const arduino::packetizer::Packet& dd() {
-//   return Packetizer::decode(serial_rx(), serial_rx_index());
-// }
 inline String readNTBS(STL_UINT8_VECTOR data, int& idx) {
   String result = "";
   while (data[idx++] != 0) {
@@ -81,14 +77,14 @@ inline String readNTBS(STL_UINT8_VECTOR data, int& idx) {
   return result;
 }
 
-const arduino::packetizer::Packet& _decode();
+const arduino::packetizer::Packet& decode_packet();
 
 class Globals {
  public:
   inline void loop() {
     while (Serial.available() > 0) {
       if (serial_rx_index() < 2048 && (serial_rx()[serial_rx_index()++] = Serial.read()) == 0) {
-        const auto& p_out = _decode();
+        const auto& p_out = decode_packet();
         serial_rx_index() = 0;
 
         const auto data = p_out.data;

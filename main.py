@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
         processes: dict[str, Process] = {}
 
-        gb.init()
+        gb.init(("127.0.0.1", 7984))
 
         for name in workers.__dict__:
             worker = workers.__dict__[name]
@@ -39,6 +39,8 @@ if __name__ == '__main__':
                 p = Process(target=worker.run, args=(WorkerController(name, gb.share),))
                 p.start()
                 processes[name] = p
+                # IMPORTANT: Slow it down to avoid process not started or hanged
+                time.sleep(0.1)
 
         gb.write('process.main.pid', os.getpid())
         while True:
