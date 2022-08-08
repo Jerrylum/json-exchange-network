@@ -13,6 +13,7 @@ from serial.tools.list_ports_common import ListPortInfo
 
 import globals as gb
 
+
 class PortInfo:
     device: str = None
     vid: str = None
@@ -63,9 +64,7 @@ class SerialConnection(GatewayClientLike, Gateway):
             else:
                 gb.write(packet.path, packet.change)
         elif packet_class is DebugMessageC2SPacket:
-            # print("Arduino: {} {}".format(packet.message, time.perf_counter()))  # TODO
-            logger.debug("Receive: %f" % time.perf_counter())
-            # print("Arduino: {}".format(packet.message))  # TODO
+            print(CustomFormatter.green + packet.message + CustomFormatter.reset, end="")  # TODO
 
         if self.state == 0:
             self.state = 1
@@ -166,4 +165,3 @@ class SerialConnectionManager(GatewayManager):
     def spin(self):
         if time.perf_counter() - self.last_connect_attempt > 1:
             self.connect()
-

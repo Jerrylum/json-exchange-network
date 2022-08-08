@@ -13,10 +13,6 @@
 **Client-Like Gateway:** A role that is responsible for sending patch messages to the other end.
 
 
-## Latency
-
-Proccess to proccess latency 0.6ms to 0.8ms
-
 ## Protocol
 
 ### Packet

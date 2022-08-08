@@ -22,6 +22,7 @@ def wait(ms):
 
 
 class Clock:
+
     def __init__(self, frequency: int, busyWait=False, offset=0.00015):
         self.period = 1 / frequency
         self.last_time = time.perf_counter()
@@ -46,6 +47,7 @@ class Clock:
 
 
 class TpsCounter:
+
     def __init__(self):
         self._last_sec_timestamp = 0
         self._tps = 0
@@ -134,6 +136,7 @@ class Diff:
 
 
 class DiffOrigin:
+
     def __init__(self):
         self.ignored_diff_id: set[int] = set()
 
@@ -142,6 +145,7 @@ class CustomFormatter(logging.Formatter):
     grey = "\x1b[38;20m"
     yellow = "\x1b[33;20m"
     red = "\x1b[31;20m"
+    green = "\x1b[32;20m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
     format1 = "[%(asctime)s] - [%(name)s/%(levelname)s]" + reset + ": %(message)s"
@@ -170,6 +174,6 @@ logger = logging.getLogger("Main")
 logger.name
 logger.setLevel(logging.DEBUG)
 logger.addHandler(CustomFormatter.getLoggerHandler())
-fh = logging.FileHandler('latest.log')
-fh.setLevel(logging.DEBUG)
-logger.addHandler(fh)
+# fh = logging.FileHandler('latest.log')
+# fh.setLevel(logging.DEBUG)
+# logger.addHandler(fh)

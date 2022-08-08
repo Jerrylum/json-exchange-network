@@ -12,6 +12,7 @@ from core.gateway import *
 
 import globals as gb
 
+
 class UDPConnection(GatewayClientLike):
 
     def __init__(self, addr: Address, server: any):
@@ -28,7 +29,7 @@ class UDPConnection(GatewayClientLike):
             available_packets = [HelloC2SPacket]
         elif self.state == 1:
             available_packets = [HelloC2SPacket, DiffPacket, MarshalDiffPacket, DebugMessageC2SPacket]
-        packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0] # TODO: error point
+        packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]  # TODO: error point
 
         packet = packet_class().decode(data)
 
@@ -104,7 +105,6 @@ class UDPClient(GatewayClientLike, Gateway):
         available_packets = [GatewayIdentityC2SPacket, DiffPacket, MarshalDiffPacket]
         packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]
 
-
         packet = packet_class().decode(data)
 
         if packet_class is GatewayIdentityC2SPacket and self.state == 0:
@@ -120,7 +120,7 @@ class UDPClient(GatewayClientLike, Gateway):
             })
         elif packet_class is DiffPacket or packet_class is MarshalDiffPacket:
             gb.write(packet.path, packet.change, False, self)
-    
+
     def write(self, packet: Packet):
         self.s.sendto(packet.data, self.server_addr)
 
@@ -141,11 +141,11 @@ class UDPClient(GatewayClientLike, Gateway):
                         self.write(HelloC2SPacket().encode())
 
                         in_raw, _ = s.recvfrom(2048)
-                        self.read(in_raw) # Data Patch
+                        self.read(in_raw)  # Data Patch
                         in_raw, _ = s.recvfrom(2048)
-                        self.read(in_raw) # Device Identify
+                        self.read(in_raw)  # Device Identify
 
-                        s.settimeout(None) # TODO
+                        s.settimeout(None)  # TODO
                     except:
                         logger.warning("Error in UDP client hello")
                         pass

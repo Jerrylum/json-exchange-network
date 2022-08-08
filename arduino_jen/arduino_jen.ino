@@ -39,7 +39,7 @@ DECLARE_WATCHER(JsonObject, shooter_setting, "rs.s",
   sy_pid->_Ki = sy["i"] | 0.0;
 
   static int count = 0;
-  console << "updated pid" << count++;
+  console << "updated pid" << count++ << "\n";
 )
 
 DECLARE_WATCHER(JsonArray, gen_output, "rg.o",
@@ -57,8 +57,8 @@ DECLARE_WATCHER(JsonArray, gen_output, "rg.o",
   digitalWrite(AIR_PLATFORM_DOWN, platform ? HIGH : LOW);
 
   static int count = 0;
-  // console << "updated " << count++;
-  console << count++;
+  // console << "updated " << count++ << "\n";
+  console << count++ << "\n";
 )
 
 DECLARE_WATCHER(JsonArray, shooter_output, "rs.o",
@@ -69,8 +69,8 @@ DECLARE_WATCHER(JsonArray, shooter_output, "rs.o",
   group1_rm[1].target_tick = y;
 
   // static int count = 0;
-  // console << "shooter updated " << count++;
-  // console << x;
+  // console << "shooter updated " << count++ << "\n";
+  // console << x << "\n";
 )
 
 void setup() {

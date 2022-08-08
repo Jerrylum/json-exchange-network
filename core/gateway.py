@@ -78,7 +78,7 @@ class Gateway(DiffOrigin):
         pass
 
     def _sync(self):
-        for f in self._filter_final_sync(): # TODO
+        for f in self._filter_final_sync():
             packet = self.diff_packet_type().encode(f.path, f.change)
             self._sync_exact_match(f, packet)
 
@@ -90,6 +90,6 @@ class Gateway(DiffOrigin):
 
 
 class GatewayManager:
-    
+
     def spin(self):
         pass

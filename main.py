@@ -15,8 +15,7 @@ if 'DISPLAY' not in os.environ:
 
 import time
 import serial.tools.list_ports
-from multiprocessing import Manager, Process
-from multiprocessing.process import current_process
+from multiprocessing import Process
 from types import ModuleType
 
 import globals as gb
