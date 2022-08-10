@@ -83,51 +83,50 @@ class Globals {
  public:
   inline void loop() {
     while (Serial.available() > 0) {
-      if (serial_rx_index() < 2048 && (serial_rx()[serial_rx_index()++] = Serial.read()) == 0) {
-        const auto& p_out = decode_packet();
-        serial_rx_index() = 0;
+      if ((serial_rx()[serial_rx_index()++] = Serial.read()) != 0 && serial_rx_index() < JSON_DOC_SIZE) continue;
+      const auto& p_out = decode_packet();
+      serial_rx_index() = 0;
 
-        const auto data = p_out.data;
+      const auto data = p_out.data;
 
-        int idx = 0;
+      int idx = 0;
 
-        if (p_out.index == 2) {
-          jen::conn_id() = readNTBS(data, idx);
+      if (p_out.index == 2) {
+        jen::conn_id() = readNTBS(data, idx);
 
-          StaticJsonDocument<JSON_DOC_SIZE> data;
-          data["available"] = true;
-          data["type"] = "tty";
-          data.createNestedArray("watch");
-          write("device", data);
+        StaticJsonDocument<JSON_DOC_SIZE> data;
+        data["available"] = true;
+        data["type"] = "tty";
+        data.createNestedArray("watch");
+        write("device", data);
 
-          sync();
+        update_watch();
 
-          console << "Registered id " << conn_id() << "\n";
-        } else if (p_out.index == 3) {
-          StaticJsonDocument<JSON_DOC_SIZE> cache;
+        console << "Registered id " << conn_id() << "\n";
+      } else if (p_out.index == 3) {
+        StaticJsonDocument<JSON_DOC_SIZE> cache;
 
-          String path = readNTBS(data, idx);
-          DeserializationError error = deserializeMsgPack(cache, &data[idx]);
-          if (error) {
-            console << "deserializeMsgPack() failed: " << error.f_str() << "\n";
-            return;
-          }
-
-          emitter().emit(path.c_str(), cache.as<JsonVariant>());
+        String path = readNTBS(data, idx);
+        DeserializationError error = deserializeMsgPack(cache, &data[idx]);
+        if (error) {
+          console << "deserializeMsgPack() failed: " << error.f_str() << "\n";
+          continue;
         }
+
+        emitter().emit(path.c_str(), cache.as<JsonVariant>());
       }
     }
   }
 
-  inline void setup() {
-    Serial.begin(115200);
+  inline void setup(int baudrate) {
+    Serial.begin(baudrate);
     Serial.setTimeout(1);
   }
 
   template <typename TValue>
   bool write(String path, const TValue val) {
     // not ready yet
-    if (jen::conn_id() == "") return false;
+    if (conn_id() == "") return false;
 
     // Changing all channels is not allowed
     if (path.length() == 0) return false;
@@ -149,8 +148,10 @@ class Globals {
     Packetizer::send(Serial, 3, send, path_size + data_size);
   }
 
-  inline void sync() {
-    StaticJsonDocument<128> send;
+  inline void update_watch() {
+    if (conn_id() == "") return;
+
+    StaticJsonDocument<(EVENT_EMITTER_MAX_LISTENERS + 1) * EVENT_EMITTER_MAX_EVENT_STRING_SIZE> send;
     for (unsigned int i = 0; i < EVENT_EMITTER_MAX_LISTENERS; ++i) {
       if (emitter().listeners[i] != NULL) {
         send.add(emitter().listeners[i]->getEventName());
@@ -161,7 +162,7 @@ class Globals {
 
   inline void watch(String path, void (*cb)(JsonVariant t)) {
     emitter().addListener(path.c_str(), cb);
-    if (conn_id() != "") sync();
+    update_watch();
   }
 };
 

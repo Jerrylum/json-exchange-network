@@ -23,6 +23,9 @@ class ClientLikeRole(DiffOrigin):
             self.ignored_diff_id.remove(diff.uuid)
             return
 
+        if self.state == 0:
+            return
+
         for w in self.watching:
             if diff.match(w):
                 self.write(packet)
@@ -150,9 +153,9 @@ class Gateway(DiffOrigin):
 
     def _sync_thread(self):
         while self.started:
+            self._sync()
             with gb.sync_condition:
                 gb.sync_condition.wait()
-            self._sync()
 
 
 class GatewayManager:

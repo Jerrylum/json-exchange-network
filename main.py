@@ -31,7 +31,8 @@ if __name__ == '__main__':
 
         processes: dict[str, Process] = {}
 
-        gb.init(("127.0.0.1", 7984))
+        gb.init()
+        gb.create_server(("127.0.0.1", 7984))
 
         for name in workers.__dict__:
             worker = workers.__dict__[name]

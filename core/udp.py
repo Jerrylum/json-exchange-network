@@ -15,7 +15,6 @@ class UDPConnection(UpstreamRole):
 
     def __init__(self, addr: Address, server: any):
         UpstreamRole.__init__(self)
-        ClientLikeRole.__init__(self)
 
         self.watching = []
 
@@ -83,11 +82,11 @@ class UDPClient(DownstreamRole, Gateway):
         if self.started:
             return
         self.started = True
+        
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.s.settimeout(0.5)
 
         def client_read_thread():
-            self.s = s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.settimeout(0.5)
-
             logger.info("UDP client started")
 
             last_hello_attempt = 0
@@ -98,7 +97,7 @@ class UDPClient(DownstreamRole, Gateway):
                         last_hello_attempt = time.perf_counter()
                         self.write(HelloD2UPacket().encode())
 
-                    in_raw, _ = s.recvfrom(2048)
+                    in_raw, _ = self.s.recvfrom(2048)
                     self.read(in_raw)
                 except (TimeoutError, socket.timeout):
                     logger.warning("UDP client time out")

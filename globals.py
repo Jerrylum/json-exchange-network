@@ -17,7 +17,7 @@ from core.udp import *
 diff_queue = [Diff.placeholder()] * consts.DIFF_QUEUE_SIZE
 sync_condition = threading.Condition()
 
-share: any = None
+share: any = { "conn": {} }
 current_worker: WorkerController = None
 gateways: list[Gateway] = []
 early_gateways: list[Gateway] = []
@@ -102,7 +102,7 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=Non
         sync_condition.notify_all()
 
 
-def init(addr: Address):
+def init():
     global share
 
     initial_yml_file = os.path.dirname(os.path.realpath(__file__)) + "/initial.yml"
@@ -114,12 +114,15 @@ def init(addr: Address):
             raise
 
 
+def create_server(addr: Address):
     server = UDPServer(addr)
     server.start_listening()
     gateways.append(server)
+    return server
 
 
 def connect_server(addr: Address):
     client = UDPClient(addr)
     client.start()
     gateways.append(client)
+    return client

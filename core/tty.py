@@ -44,8 +44,12 @@ class SerialConnection(UpstreamRole, Gateway):
         self.diff_packet_type = DiffPacket
 
     def write(self, packet: Packet):
-        with self.write_lock:
-            self.s.write(packet.data + bytes([0]))
+        try:
+            with self.write_lock:
+                self.s.write(packet.data + bytes([0]))
+        except:
+            logger.error("Error in \"%s\" write call" % self.conn_id, exc_info=True)
+            self.manager.disconnect(self)
 
     def start(self):
         if self.started:
@@ -91,6 +95,10 @@ class SerialConnection(UpstreamRole, Gateway):
         threading.Thread(target=read_thread).start()
         threading.Thread(target=self._sync_thread).start()
 
+    def stop(self):
+        self.started = False
+        self.s.close()
+
 
 class SerialConnectionManager(GatewayManager):
 
@@ -100,7 +108,7 @@ class SerialConnectionManager(GatewayManager):
         self.whitelist: list[PortInfo] = []
 
         self.last_connect_attempt = 0
-        self.using_device = []
+        self.using_devices = []
 
     def try_change_port_permission(self, path: str):
         try:
@@ -117,13 +125,13 @@ class SerialConnectionManager(GatewayManager):
         tty_list = [p for p in tty_list if any(w.match(p) for w in self.whitelist)]
 
         for f in tty_list:
-            if f.device in self.using_device:
+            if f.device in self.using_devices:
                 continue
 
             try:
                 conn = SerialConnection(f.device, self)
                 conn.start()
-                self.using_device.append(f.device)
+                self.using_devices.append(f.device)
                 gb.gateways.append(conn)
                 gb.early_gateways.append(conn)
                 logger.info("Serial connection %s (%s) is established" % (f.device, f.serial_number))
@@ -131,9 +139,11 @@ class SerialConnectionManager(GatewayManager):
                 self.try_change_port_permission(f)
 
     def disconnect(self, conn: SerialConnection):
-        self.using_device.remove(conn.device_path)
-        gb.gateways.remove(conn)
-        gb.early_gateways.remove(conn)
+        if conn.device_path in self.using_devices:
+            conn.stop()
+            self.using_devices.remove(conn.device_path)
+            gb.gateways.remove(conn)
+            gb.early_gateways.remove(conn)
         logger.warning("Serial connection %s is closed" % conn.device_path)
 
     def spin(self):

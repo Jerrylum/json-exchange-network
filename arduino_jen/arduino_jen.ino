@@ -91,7 +91,7 @@ void setup() {
 
   Can0.begin(CAN_BPS_1000K);  //  For communication with RM motors
 
-  gb.setup();
+  gb.setup(115200);
 
   Tasks_Add((Task)loop1, 1, 0);
   Tasks_Add((Task)loop2, 10, 0);
