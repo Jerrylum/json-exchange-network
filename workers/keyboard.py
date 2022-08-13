@@ -1,10 +1,6 @@
 from tkinter import *
 
-from core.tools import WorkerController
-
-import globals as gb
-
-import time
+from jen import *
 
 
 def run(worker: WorkerController):

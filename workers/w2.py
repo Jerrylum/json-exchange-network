@@ -1,8 +1,4 @@
-import time
-
-from core.tools import WorkerController
-
-import globals as gb
+from jen import *
 
 
 def run(worker: WorkerController):

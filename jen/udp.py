@@ -4,11 +4,7 @@ import threading
 import time
 import uuid
 
-import consts
-
-from core.protocol import *
-from core.tools import *
-from core.gateway import *
+from .gateway import *
 
 
 class UDPConnection(UpstreamRole):

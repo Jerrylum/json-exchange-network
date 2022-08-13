@@ -2,8 +2,8 @@ from typing import Union, Callable
 
 import time
 
-import globals as gb
-from consts import *
+import jen.globals as gb
+from .consts import *
 
 
 ButtonSymbol = Union[str, Callable[[any], bool]]

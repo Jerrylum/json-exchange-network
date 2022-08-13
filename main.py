@@ -14,14 +14,14 @@ if 'DISPLAY' not in os.environ:
     os.environ['DISPLAY'] = ':0'
 
 import time
+import pathlib
 import serial.tools.list_ports
 from multiprocessing import Process
 from types import ModuleType
 
-import globals as gb
 import workers
 
-from core.tools import *
+from jen import *
 
 
 if __name__ == '__main__':
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
         processes: dict[str, Process] = {}
 
-        gb.init()
+        gb.init(str(pathlib.Path(__file__).parent.absolute()) + "/initial.yml")
         gb.create_server(("127.0.0.1", 7984))
 
         for name in workers.__dict__:

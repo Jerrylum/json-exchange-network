@@ -1,13 +1,7 @@
 import platform
 import pygame
 
-import time
-
-from core.tools import *
-
-import globals as gb
-
-import consts
+from jen import *
 
 
 def axis(val: float):

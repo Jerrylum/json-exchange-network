@@ -1,4 +1,4 @@
-from typing import Union, Callable, Tuple, Any, cast
+from typing import Union, Callable, Optional, Tuple, Any, cast
 
 import crc8
 import msgpack

@@ -3,12 +3,12 @@ import websockets
 import time
 import sys
 
-from consts import *
-from core.opcontrol import *
-from core.protocol import *
-from core.tools import *
+from jen.consts import *
+from jen.opcontrol import *
+from jen.protocol import *
+from jen.tools import *
 
-import globals as gb
+import jen.globals as gb
 
 all_connections = []
 

@@ -1,18 +1,11 @@
-from curses import baudrate
 import serial
 import serial.tools.list_ports
 import time
 import threading
 import os
 
-import consts
-
-from core.protocol import *
-from core.tools import *
-from core.gateway import *
+from .gateway import *
 from serial.tools.list_ports_common import ListPortInfo
-
-import globals as gb
 
 
 class PortInfo:

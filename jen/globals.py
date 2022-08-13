@@ -1,18 +1,10 @@
 import threading
-from typing import Optional
 import yaml
-import os
 import copy
 import threading
-import time
-import uuid
 
-import consts
+from .gateway import *
 
-from core.protocol import *
-from core.tools import *
-from core.gateway import *
-from core.udp import *
 
 diff_queue = [Diff.placeholder()] * consts.DIFF_QUEUE_SIZE
 sync_condition = threading.Condition()
@@ -102,10 +94,9 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=Non
         sync_condition.notify_all()
 
 
-def init():
+def init(initial_yml_file: str):
     global share
 
-    initial_yml_file = os.path.dirname(os.path.realpath(__file__)) + "/initial.yml"
     with open(initial_yml_file, "r", encoding="utf-8") as stream:
         try:
             share = yaml.safe_load(stream)
@@ -115,6 +106,8 @@ def init():
 
 
 def create_server(addr: Address):
+    from jen.udp import UDPServer
+
     server = UDPServer(addr)
     server.start_listening()
     gateways.append(server)
@@ -122,6 +115,8 @@ def create_server(addr: Address):
 
 
 def connect_server(addr: Address):
+    from jen.udp import UDPClient
+
     client = UDPClient(addr)
     client.start()
     gateways.append(client)

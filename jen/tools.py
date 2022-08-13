@@ -2,23 +2,10 @@
 import logging
 import threading
 import time
-from typing import Optional
 import uuid
-
-import consts
-
-import globals as gb
 
 
 Address = tuple[str, int]
-
-
-def start_thread(method):
-    threading.Thread(target=method).start()
-
-
-def wait(ms):
-    time.sleep(ms / 1000)
 
 
 class Clock:
@@ -63,47 +50,6 @@ class TpsCounter:
 
     def tps(self):
         return self._tps
-
-
-class WorkerController:
-
-    def __init__(self, name: str, shared_data: dict):
-        from core.gateway import GatewayManager
-
-        self.name = name
-        self.display_name = ''.join(word.title() for word in name.split('_'))
-        self.shared_data = shared_data
-        self.managers: list[GatewayManager] = []
-        self.clock: Optional[Clock] = None
-
-        logger.info("Worker \"%s\" registered" % self.display_name)
-
-    def init(self):
-        gb.sync_condition = threading.Condition()
-        gb.share = self.shared_data
-        gb.current_worker = self
-        gb.gateways = []
-        gb.early_gateways = []
-
-        logger.name = self.display_name
-
-        logger.info("Worker started")
-
-    def use_clock(self, frequency: int, busy_wait=False, offset=0.0004):
-        self.clock = Clock(frequency, busy_wait, offset)
-        return self.clock
-
-    def use_serial_manager(self):
-        from core.tty import SerialConnectionManager
-
-        m = SerialConnectionManager(self)
-        self.managers.append(m)
-        return m
-
-    def spin(self):
-        [m.spin() for m in self.managers]
-        if self.clock is not None:
-            self.clock.spin()
 
 
 class Diff:
