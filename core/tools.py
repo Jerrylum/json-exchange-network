@@ -139,6 +139,7 @@ class DiffOrigin:
 
     def __init__(self):
         self.ignored_diff_id: set[int] = set()
+        self.diff_packet_type = None
 
 
 class CustomFormatter(logging.Formatter):

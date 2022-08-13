@@ -16,7 +16,7 @@ class UDPConnection(UpstreamRole):
     def __init__(self, addr: Address, server: any):
         UpstreamRole.__init__(self)
 
-        self.watching = []
+        self.watching = set()
 
         self.conn_id = "UDP-" + str(uuid.uuid4())[:8]
         self.addr = addr

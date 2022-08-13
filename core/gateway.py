@@ -11,7 +11,9 @@ class ClientLikeRole(DiffOrigin):
     def __init__(self):
         DiffOrigin.__init__(self)
 
-        self.watching: list[str] = ["", "*"]
+        self.diff_packet_type = MarshalDiffPacket
+
+        self.watching: set[str] = ["", "*"]
 
         self.conn_id: str = "(unknown)"
         self.state: int = 0  # 0 = Registering, 1 = Running
@@ -56,17 +58,16 @@ class UpstreamRole(ClientLikeRole):
 
             self.write(GatewayIdentityU2DPacket().encode(self.conn_id))
         elif packet_class is DiffPacket or packet_class is MarshalDiffPacket:
-            if ("conn." + self.conn_id + ".watch").startswith(packet.path):
-                watcher_path = "conn." + self.conn_id + ".watch"
-                old_watchers = gb.read(watcher_path) or []
+            watcher_path = "conn." + self.conn_id + ".watch"
+            if watcher_path.startswith(packet.path):
+                old_watchers = set(gb.read(watcher_path) or [])
 
                 gb.write(packet.path, packet.change, False, self)
 
-                self.watching = gb.read(watcher_path) or []
-                diff_watchers = set(self.watching) - set(old_watchers)
-                for watcher in diff_watchers:
+                self.watching = set(gb.read(watcher_path) or [])
+                for watcher in self.watching - old_watchers:
                     if not watcher.endswith("*"):
-                        self.write(DiffPacket().encode(watcher, gb.read(watcher)))
+                        self.write(self.diff_packet_type().encode(watcher, gb.read(watcher)))
             else:
                 gb.write(packet.path, packet.change, False, self)
         elif packet_class is DebugMessageD2UPacket:
@@ -98,7 +99,7 @@ class DownstreamRole(ClientLikeRole):
                 "available": True,
                 "worker_name": gb.current_worker.display_name if gb.current_worker else "(unknown)",
                 "type": "udp",
-                "watch": self.watching
+                "watch": list(self.watching)
             })
         elif packet_class is DiffPacket or packet_class is MarshalDiffPacket:
             gb.write(packet.path, packet.change, False, self)

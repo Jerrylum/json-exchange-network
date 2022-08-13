@@ -15,7 +15,7 @@ def run(worker: WorkerController):
     sm.whitelist.append(PortInfo(serial_number="5513132373735171A0B1"))
     sm.whitelist.append(PortInfo(serial_number="7513131383235170F071"))
 
-    gb.connect_server(("0.0.0.0", 7984))
+    gb.connect_server(("127.0.0.1", 7984))
 
     gen_output = gb.clone("rg.o")
     shooter_output = gb.clone("rs.o")
@@ -39,6 +39,6 @@ def run(worker: WorkerController):
 
         # print("local", gen_output)
         # # print("e", time.perf_counter())
-        # # print("feedback", gb.read("rg.f"))
+        # print("feedback", gb.read("rs.f"))
 
         worker.spin()

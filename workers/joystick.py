@@ -19,7 +19,7 @@ def axis(val: float):
 def run(worker: WorkerController):
     worker.init()
 
-    gb.connect_server(("0.0.0.0", 7984))
+    gb.connect_server(("127.0.0.1", 7984))
 
     pygame.init()
 
