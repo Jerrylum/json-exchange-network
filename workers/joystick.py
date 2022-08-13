@@ -19,7 +19,9 @@ def axis(val: float):
 def run(worker: WorkerController):
     worker.init()
 
-    gb.connect_server(("127.0.0.1", 7984))
+    client = gb.connect_server(("127.0.0.1", 7984))
+    client.watching = set(["process.main.update", "opcontrol.joystick", "opcontrol.joystick.*"])
+    gb.early_gateways.append(client)
 
     pygame.init()
 

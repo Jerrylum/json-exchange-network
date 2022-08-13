@@ -1,6 +1,6 @@
 ## Overview
 
-The Json Exchange Network is a middleware protocol and API standard that offers data distribution services. It is a decentralized network that allows JSON data to be exchanged between betweens processes and embedded systems. JEN is suitable for small robot prototypes.
+The Json Exchange Network is a middleware protocol and API standard that offers data distribution services. It is a decentralized network that allows JSON data to be exchanged between processes and embedded systems. JEN is suitable for small robot prototypes.
 
 
 ## Json Exchange Network
@@ -91,12 +91,9 @@ gb.write("shooter.pid", {"p": 0.03, "i": 0.0, "d": 0.45})
 gb.read("shooter.pid.p") # returns 0.035
 ```
 
-For example, in the following graph, yellow, red, and blue represent a UDP, Serial and WebSockets connection respectively.
+In the network, different nodes are updating different parts of the doucment. Nodes communicate with other nodes using gateways (small circles). It doesn't matter what type of the connection between gateways is in the network. For example, in the following graph, yellow, red, and blue represent a UDP, Serial and WebSockets connection respectively.
 
-Nodes are communicating with each other via gateways (small circles).
-
-![Network Graph](https://imgur.com/PO7P0NZ.png)
-
+![Network Graph](https://imgur.com/yjAL5vc.png)
 
 
 ## Protocol
@@ -233,11 +230,11 @@ A connection is in the `Running` state after the downstream sent any packets exc
 
 A gateway is REQUIRED to broadcast data patches from the local diff queue to the network and receive data patches from the network to the local diff queue.
 
-An upstream MUST only send the data patches watched by the downstream. However, a downstream MAY send any data patches to the upstream.
+The upstream MUST only send the data patches watched by the downstream and the downstream SHOULD only send the data patches watched by the downstream to the upstream.
 
 A set of watching paths is located in the `conn.<conn_id>.watch` field. An upstream can only send a data patch to a downstream if the path of the data patch fulfills any of the following conditions:
  - There is a wildcard path in the set that is a prefix of the path. For example, `foo.*` matches `foo.bar` and `foo.bar.baz` but not `foo`. The wildcard path `*` matches all paths.
- - There is a path in the set that is exactly the same
+ - There is a path in the set that is exactly the same.
 
 
 ### Updating the Watching Paths
@@ -256,21 +253,23 @@ if watching paths set is updated:
 
 ## Requirement
 
-Used packages / libraries:
+Used libraries in Arduino:
 ```
-In Python
-using: crc8, cobs, msgpack, websockets
-
-In Arduino
-due_can, Task Scheduler (by Kai Liebich & Georg Icking-Konert), hideakitai/MsgPack, hideakitai/Packetizer, ArduinoJson, ArxContainer
+due_can (by Collin Kidder and more)
+Task Scheduler (by Kai Liebich & Georg Icking-Konert)
+MsgPack (by hideakitai)
+Packetizer (by hideakitai)
+ArduinoJson (by Benoit Blanchon)
+ArxContainer (by hideakitai)
 ```
 
 
-Included path in VS Code:
+Included paths in VS Code:
 ```
 /home/cityurbc/Arduino/libraries/due_can
 /home/cityurbc/Arduino/libraries/Task_Scheduler/src
 /home/cityurbc/Arduino/libraries/MsgPack
+/home/cityurbc/Arduino/libraries/Packetizer
 /home/cityurbc/Arduino/libraries/ArduinoJson/src
 /home/cityurbc/Arduino/libraries/ArxContainer
 ```

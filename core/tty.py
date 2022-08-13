@@ -1,3 +1,4 @@
+from curses import baudrate
 import serial
 import serial.tools.list_ports
 import time
@@ -19,12 +20,16 @@ class PortInfo:
     vid: str = None
     pid: str = None
     serial_number: str = None
+    
+    baudrate: int = None
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
     def match(self, other: ListPortInfo):
         for key in self.__dict__:
+            if key == "baudrate":
+                continue
             if key not in other.__dict__:
                 return False
             if self.__dict__[key] != other.__dict__[key]:
@@ -34,12 +39,13 @@ class PortInfo:
 
 class SerialConnection(UpstreamRole, Gateway):
 
-    def __init__(self, path: str, manager: any):
+    def __init__(self, path: str, baudrate: int, manager: any):
         ClientLikeRole.__init__(self)
         Gateway.__init__(self)
 
         self.conn_id = "TTY-" + str(uuid.uuid4())[:8]
         self.device_path = path
+        self.device_baudrate = baudrate
         self.manager = manager
         self.diff_packet_type = DiffPacket
 
@@ -56,7 +62,7 @@ class SerialConnection(UpstreamRole, Gateway):
             return
         self.started = True
 
-        self.s = serial.Serial(port=self.device_path, baudrate=115200)
+        self.s = serial.Serial(port=self.device_path, baudrate=self.device_baudrate)
         self.write_lock = threading.Lock()
         self.serial_rx = [0] * 2048
         self.serial_rx_index = 0
@@ -129,7 +135,8 @@ class SerialConnectionManager(GatewayManager):
                 continue
 
             try:
-                conn = SerialConnection(f.device, self)
+                info = next(w for w in self.whitelist if w.match(f))
+                conn = SerialConnection(f.device, info.baudrate, self)
                 conn.start()
                 self.using_devices.append(f.device)
                 gb.gateways.append(conn)

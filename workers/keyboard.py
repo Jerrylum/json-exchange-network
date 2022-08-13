@@ -10,7 +10,10 @@ import time
 def run(worker: WorkerController):
     worker.init()
 
-    gb.connect_server(("127.0.0.1", 7984))
+    client = gb.connect_server(("127.0.0.1", 7984))
+    client.watching = set(["process.main.update", "opcontrol.keyboard.keys.*"])
+    gb.early_gateways.append(client)
+
 
     attention = {}
 

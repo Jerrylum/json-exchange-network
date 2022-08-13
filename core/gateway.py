@@ -13,7 +13,7 @@ class ClientLikeRole(DiffOrigin):
 
         self.diff_packet_type = MarshalDiffPacket
 
-        self.watching: set[str] = ["", "*"]
+        self.watching: set[str] = set(["", "*"])
 
         self.conn_id: str = "(unknown)"
         self.state: int = 0  # 0 = Registering, 1 = Running
@@ -38,6 +38,9 @@ class ClientLikeRole(DiffOrigin):
 
     def write(self, packet: Packet):
         pass
+
+    def update_watch(self):
+        gb.write("conn." + self.conn_id + ".watch", list(self.watching))
 
 
 class UpstreamRole(ClientLikeRole):
@@ -93,7 +96,8 @@ class DownstreamRole(ClientLikeRole):
         if packet_class is GatewayIdentityU2DPacket and self.state == 0:
             self.conn_id = packet.conn_id
             self.state = 1
-            logger.info("Registered \"%s\" gateway", self.conn_id)
+            if "*" not in self.watching:
+                self.watching.add("conn." + self.conn_id)
 
             gb.write("conn." + self.conn_id, {
                 "available": True,
@@ -101,6 +105,8 @@ class DownstreamRole(ClientLikeRole):
                 "type": "udp",
                 "watch": list(self.watching)
             })
+
+            logger.info("Registered \"%s\" gateway", self.conn_id)
         elif packet_class is DiffPacket or packet_class is MarshalDiffPacket:
             gb.write(packet.path, packet.change, False, self)
 

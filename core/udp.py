@@ -101,6 +101,7 @@ class UDPClient(DownstreamRole, Gateway):
                     self.read(in_raw)
                 except (TimeoutError, socket.timeout):
                     logger.warning("UDP client time out")
+                    self.state = 0
                 except:
                     print("error buffer", in_raw)
                     logger.error("Error in \"%s\" read thread" % self.conn_id, exc_info=True)
