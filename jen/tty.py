@@ -57,7 +57,7 @@ class SerialConnection(UpstreamRole, Gateway):
 
         self.s = serial.Serial(port=self.device_path, baudrate=self.device_baudrate)
         self.write_lock = threading.Lock()
-        self.serial_rx = [0] * 2048
+        self.serial_rx = [0] * consts.PACKET_MAXIMUM_SIZE
         self.serial_rx_index = 0
 
         # Passive Mode
@@ -109,13 +109,6 @@ class SerialConnectionManager(GatewayManager):
         self.last_connect_attempt = 0
         self.using_devices = []
 
-    def try_change_port_permission(self, path: str):
-        try:
-            os.system("echo %s|sudo -S %s" % ("robocon", "chmod 666 " + path))
-            print("sudo chmod port", path)
-        except:
-            print("Unable to chmod port", path)
-
     def connect(self):
         self.last_connect_attempt = time.perf_counter()
 
@@ -136,7 +129,7 @@ class SerialConnectionManager(GatewayManager):
                 gb.early_gateways.append(conn)
                 logger.info("Serial connection %s (%s) is established" % (f.device, f.serial_number))
             except:
-                self.try_change_port_permission(f)
+                logger.warning("Unable to establish serial connection %s" % f.device)
 
     def disconnect(self, conn: SerialConnection):
         if conn.device_path in self.using_devices:
@@ -148,5 +141,5 @@ class SerialConnectionManager(GatewayManager):
         logger.warning("Serial connection %s is closed" % conn.device_path)
 
     def spin(self):
-        if time.perf_counter() - self.last_connect_attempt > 1:
+        if time.perf_counter() - self.last_connect_attempt > consts.CONNECTION_RETRY_DELAY:
             self.connect()

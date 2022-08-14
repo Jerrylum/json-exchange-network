@@ -49,7 +49,7 @@ class UpstreamRole(ClientLikeRole):
         ClientLikeRole.__init__(self)
 
     def read(self, in_raw: bytes):
-        packet_id, data = unpack(in_raw)
+        packet_id, data = PacketEncoder.unpack(in_raw)
 
         available_packets = [HelloD2UPacket, DiffPacket, MarshalDiffPacket, DebugMessageD2UPacket]
         packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]
@@ -86,7 +86,7 @@ class DownstreamRole(ClientLikeRole):
         ClientLikeRole.__init__(self)
 
     def read(self, in_raw: bytes):
-        packet_id, data = unpack(in_raw)
+        packet_id, data = PacketEncoder.unpack(in_raw)
 
         available_packets = [GatewayIdentityU2DPacket, DiffPacket, MarshalDiffPacket]
         packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]

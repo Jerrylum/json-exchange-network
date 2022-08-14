@@ -1,4 +1,4 @@
-from typing import Union, Callable, Optional, Tuple, Any, cast
+from typing import Union, Callable, Optional, Tuple, cast
 
 import crc8
 import msgpack
@@ -10,41 +10,41 @@ PkgIdxType = Union[int, bytes]
 # https://gitlab.com/-/ide/project/advian-oss/python-msgpacketizer/tree/master/-/src/msgpacketizer/packer.py/
 
 
-def normalize_pkgidx(pkgidx: PkgIdxType) -> bytes:
-    """Normalize pkgidx to bytes"""
-    if not isinstance(pkgidx, (int, bytes)):
-        raise ValueError("pkgidx must be int (0-255) or byte")
-    if isinstance(pkgidx, int):
-        pkgidx = bytes([pkgidx])
-    if len(pkgidx) != 1:
-        raise ValueError("pkgidx must be exactly one byte")
-    return pkgidx
+class PacketEncoder:
 
+    def normalize_pkg_type(pkg_type: PkgIdxType) -> bytes:
+        """Normalize pkg type to bytes"""
+        if not isinstance(pkg_type, (int, bytes)):
+            raise ValueError("Packet type must be int (0-255) or byte")
+        if isinstance(pkg_type, int):
+            pkg_type = bytes([pkg_type])
+        if len(pkg_type) != 1:
+            raise ValueError("Packet type must be exactly one byte")
+        return pkg_type
 
-def pack(pkgidx: PkgIdxType, datain: bytes) -> bytes:  # pylint: disable=E1136
-    """Pack into msgpacketizer compatible binary, does not include the field separator null byte"""
-    pkgidx = normalize_pkgidx(pkgidx)
-    check = crc8.crc8()
-    check.update(datain)
-    return cast(bytes, cobs.encode(pkgidx + datain + check.digest()))
+    def pack(pkg_type: PkgIdxType, data_in: bytes) -> bytes:
+        """Pack into msgpacketizer compatible binary, does not include the field separator null byte"""
+        pkg_type = PacketEncoder.normalize_pkg_type(pkg_type)
+        check = crc8.crc8()
+        check.update(data_in)
+        return cobs.encode(pkg_type + data_in + check.digest())
 
-
-def unpack(bytesin: bytes) -> Tuple[int, Any]:
-    """unpack from msgpacketizer binary, can deal with the trailing/preceding null byte if needed"""
-    if bytesin[0] == 0:
-        bytesin = bytesin[1:]
-    if bytesin[-1] == 0:
-        bytesin = bytesin[:-1]
-    decoded = cobs.decode(bytesin)
-    idx = decoded[0]
-    pktcrc = decoded[-1]
-    data = decoded[1:-1]
-    check = crc8.crc8()
-    check.update(data)
-    expectedcrc = check.digest()[0]
-    if expectedcrc != pktcrc:
-        raise ValueError("packet checksum {} does not match expected {}".format(pktcrc, expectedcrc))
-    return (idx, data)
+    def unpack(bytes_in: bytes) -> Tuple[int, bytes]:
+        """unpack from msgpacketizer binary, can deal with the trailing/preceding null byte if needed"""
+        if bytes_in[0] == 0:
+            bytes_in = bytes_in[1:]
+        if bytes_in[-1] == 0:
+            bytes_in = bytes_in[:-1]
+        decoded = cobs.decode(bytes_in)
+        idx = decoded[0]
+        pkg_crc = decoded[-1]
+        data = decoded[1:-1]
+        check = crc8.crc8()
+        check.update(data)
+        expected_crc = check.digest()[0]
+        if expected_crc != pkg_crc:
+            raise ValueError("packet checksum {} does not match expected {}".format(pkg_crc, expected_crc))
+        return (idx, data)
 
 
 class Packet:
@@ -53,7 +53,7 @@ class Packet:
 
     def encode(self, payload: bytes):
         self.payload = payload
-        self.data = pack(self.PACKET_ID, payload)
+        self.data = PacketEncoder.pack(self.PACKET_ID, payload)
         return self
 
     def decode(self, payload: bytes):

@@ -80,7 +80,7 @@ class UDPClient(DownstreamRole, Gateway):
         self.started = True
 
         self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.s.settimeout(0.5)
+        self.s.settimeout(consts.CONNECTION_TIMEOUT)
 
         def client_read_thread():
             logger.info("UDP client started")
@@ -89,11 +89,11 @@ class UDPClient(DownstreamRole, Gateway):
 
             while self.started:
                 try:
-                    if self.state == 0 and time.perf_counter() - last_hello_attempt > 0.5:
+                    if self.state == 0 and time.perf_counter() - last_hello_attempt > consts.CONNECTION_RETRY_DELAY:
                         last_hello_attempt = time.perf_counter()
                         self.write(HelloD2UPacket().encode())
 
-                    in_raw, _ = self.s.recvfrom(2048)
+                    in_raw, _ = self.s.recvfrom(consts.PACKET_MAXIMUM_SIZE)
                     self.read(in_raw)
                 except (TimeoutError, socket.timeout):
                     logger.warning("UDP client time out")

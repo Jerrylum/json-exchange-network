@@ -121,7 +121,7 @@ class WebsocketClient(DownstreamRole, Gateway):
                         logger.warning("Websocket connection is closed")
                     finally:
                         self.state = 0
-                        time.sleep(0.5)
+                        time.sleep(consts.CONNECTION_RETRY_DELAY)
 
             asyncio.run(client_job())
 

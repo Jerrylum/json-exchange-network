@@ -147,7 +147,7 @@ def connect_websocket_server(addr: Address):
 def mainloop(processes: dict[str, Process]):
     try:
         gb.write('process.main.pid', os.getpid())
-        while True:
+        while gb.read("stop") is False:
             gb.write('process.main.update', time.perf_counter())
             gb.write('process.subprocess', {
                 name: {
