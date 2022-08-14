@@ -69,7 +69,7 @@ class UDPClient(DownstreamRole, Gateway):
 
         self.s: socket.socket = None
 
-        self.server_addr = addr  
+        self.server_addr = addr
 
     def write(self, packet: Packet):
         self.s.sendto(packet.data, self.server_addr)
@@ -78,7 +78,7 @@ class UDPClient(DownstreamRole, Gateway):
         if self.started:
             return
         self.started = True
-        
+
         self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.s.settimeout(0.5)
 

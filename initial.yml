@@ -68,7 +68,6 @@ conn: {
   # (name):
   #   available: boolean
   #   [display_name]: str
-  #   type: udp/tty/websocket
   #   watch:
   #   - uuid: str
   #     path: str

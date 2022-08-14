@@ -1,7 +1,9 @@
-import threading
-import yaml
 import copy
 import threading
+import pathlib
+import os
+import yaml
+from multiprocessing import Process
 
 from .gateway import *
 
@@ -9,10 +11,11 @@ from .gateway import *
 diff_queue = [Diff.placeholder()] * consts.DIFF_QUEUE_SIZE
 sync_condition = threading.Condition()
 
-share: any = { "conn": {} }
+share: any = {"conn": {}}
 current_worker: WorkerController = None
 gateways: list[Gateway] = []
 early_gateways: list[Gateway] = []
+
 
 def read(path: str):
     data = share
@@ -30,7 +33,7 @@ def clone(path: str):
     return copy.deepcopy(read(path))
 
 
-def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=None):
+def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin] = None):
     global share
 
     if "*" in path:
@@ -79,10 +82,10 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=Non
 
     if origin is not None:
         origin.ignored_diff_id.add(diff.uuid)
-    
+
     if path == "":
         share = val
-        print("global overwrite")
+        logger.info("Global overwritten")
     else:
         doRobot(share, nodes)
 
@@ -94,10 +97,10 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin]=Non
         sync_condition.notify_all()
 
 
-def init(initial_yml_file: str):
+def init(initial_yml_file: Union[str, pathlib.Path]):
     global share
 
-    with open(initial_yml_file, "r", encoding="utf-8") as stream:
+    with open(str(initial_yml_file), "r", encoding="utf-8") as stream:
         try:
             share = yaml.safe_load(stream)
         except:
@@ -121,3 +124,41 @@ def connect_server(addr: Address):
     client.start()
     gateways.append(client)
     return client
+
+
+def create_websocket_server(addr: Address):
+    from jen.ws import WebsocketServer
+
+    server = WebsocketServer(addr)
+    server.start_listening()
+    gateways.append(server)
+    return server
+
+
+def connect_websocket_server(addr: Address):
+    from jen.ws import WebsocketClient
+
+    client = WebsocketClient(addr)
+    client.start()
+    gateways.append(client)
+    return client
+
+
+def mainloop(processes: dict[str, Process]):
+    try:
+        gb.write('process.main.pid', os.getpid())
+        while True:
+            gb.write('process.main.update', time.perf_counter())
+            gb.write('process.subprocess', {
+                name: {
+                    'is_alive': processes[name].is_alive(),
+                    'pid': processes[name].pid
+                } for name in processes })
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        logger.info("Main process keyboard interrupted")
+    except BaseException:
+        logger.exception("Exception in main process", exc_info=True)
+    finally:
+        logger.info("Killing workers")
+        [p.kill() for p in processes.values()] 

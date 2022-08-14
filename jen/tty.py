@@ -13,7 +13,7 @@ class PortInfo:
     vid: str = None
     pid: str = None
     serial_number: str = None
-    
+
     baudrate: int = None
 
     def __init__(self, **kwargs):
@@ -144,6 +144,7 @@ class SerialConnectionManager(GatewayManager):
             self.using_devices.remove(conn.device_path)
             gb.gateways.remove(conn)
             gb.early_gateways.remove(conn)
+            gb.write("conn." + conn.conn_id, None)
         logger.warning("Serial connection %s is closed" % conn.device_path)
 
     def spin(self):

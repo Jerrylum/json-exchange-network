@@ -74,7 +74,7 @@ class UpstreamRole(ClientLikeRole):
             else:
                 gb.write(packet.path, packet.change, False, self)
         elif packet_class is DebugMessageD2UPacket:
-            print(CustomFormatter.green + packet.message + CustomFormatter.reset, end="")  # TODO
+            print(CustomFormatter.green + packet.message + CustomFormatter.reset, end="")
 
         if self.state == 0 and packet_class is not HelloD2UPacket:
             self.state = 1
@@ -102,7 +102,6 @@ class DownstreamRole(ClientLikeRole):
             gb.write("conn." + self.conn_id, {
                 "available": True,
                 "worker_name": gb.current_worker.display_name if gb.current_worker else "(unknown)",
-                "type": "udp",
                 "watch": list(self.watching)
             })
 
