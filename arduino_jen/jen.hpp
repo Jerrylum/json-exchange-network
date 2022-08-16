@@ -44,7 +44,7 @@ namespace jen {
 
 class Console {};
 
-}
+}  // namespace jen
 
 static jen::Console console;
 
@@ -95,10 +95,9 @@ class Globals {
         jen::conn_id() = readNTBS(data, idx);
 
         StaticJsonDocument<JSON_DOC_SIZE> data;
-        data["available"] = true;
-        data["type"] = "tty";
+        data["available"] = (bool)true;
         data.createNestedArray("watch");
-        write("device", data);
+        write("conn." + conn_id(), data);
 
         update_watch();
 
@@ -130,9 +129,6 @@ class Globals {
 
     // Changing all channels is not allowed
     if (path.length() == 0) return false;
-
-    // Changing the root key is not allowed
-    if (path.indexOf('.', 0) == -1) return false;
 
     StaticJsonDocument<JSON_DOC_SIZE> data;
     data.set(val);
