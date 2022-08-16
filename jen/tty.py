@@ -33,13 +33,14 @@ class PortInfo:
 class SerialConnection(UpstreamRole, Gateway):
 
     def __init__(self, path: str, baudrate: int, manager: any):
-        ClientLikeRole.__init__(self)
+        UpstreamRole.__init__(self)
         Gateway.__init__(self)
 
         self.conn_id = "TTY-" + str(uuid.uuid4())[:8]
         self.device_path = path
         self.device_baudrate = baudrate
         self.manager = manager
+        self.watching = set()
         self.diff_packet_type = DiffPacket
 
     def write(self, packet: Packet):
@@ -79,9 +80,9 @@ class SerialConnection(UpstreamRole, Gateway):
                     self.serial_rx[self.serial_rx_index] = buf
                     self.serial_rx_index += 1
 
-                    if buf == 0:
+                    if buf == 0:  # Delimiter byte
                         try:
-                            in_raw = bytes(self.serial_rx[0: self.serial_rx_index])
+                            in_raw = bytes(self.serial_rx[:self.serial_rx_index])
                             self.read(in_raw)
                         except BaseException:
                             print("error buffer", in_raw)
@@ -110,8 +111,6 @@ class SerialConnectionManager(GatewayManager):
         self.using_devices = []
 
     def connect(self):
-        self.last_connect_attempt = time.perf_counter()
-
         tty_list = [p for p in list(serial.tools.list_ports.comports()) if p.device not in consts.PORT_BLACKLIST]
 
         tty_list = [p for p in tty_list if any(w.match(p) for w in self.whitelist)]
@@ -142,4 +141,5 @@ class SerialConnectionManager(GatewayManager):
 
     def spin(self):
         if time.perf_counter() - self.last_connect_attempt > consts.CONNECTION_RETRY_DELAY:
+            self.last_connect_attempt = time.perf_counter()
             self.connect()
