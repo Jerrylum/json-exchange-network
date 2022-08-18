@@ -4,6 +4,7 @@ import crc8
 import msgpack
 import marshal
 from cobs import cobs
+from .tools import * 
 
 PkgIdxType = Union[int, bytes]
 
@@ -71,6 +72,9 @@ class DiffPacket(Packet):
         payload = bytes(path, "ascii") + bytes([0]) + msgpack.packb(change)
         return super().encode(payload)
 
+    def encode_diff(self, diff: Diff):
+        return self.encode(diff.path, diff.change)
+
     def decode(self, payload: bytes):
         end = payload.find(0)
         self.path = payload[:end].decode("ascii")
@@ -88,9 +92,34 @@ class MarshalDiffPacket(Packet):
         payload = bytes(path, "ascii") + bytes([0]) + marshal.dumps(change)
         return super().encode(payload)
 
+    def encode_diff(self, diff: Diff):
+        return self.encode(diff.path, diff.change)
+
     def decode(self, payload: bytes):
         end = payload.find(0)
         self.path = payload[:end].decode("ascii")
+        self.change = marshal.loads(payload[end + 1:])
+        return self
+
+
+class MarshalDiffBroadcastPacket(Packet):
+    PACKET_ID = 6
+
+    def encode(self, diff_id: int, path: str, change: any):
+        self.diff_id = diff_id
+        self.path = path
+        self.change = change
+
+        payload = int(self.diff_id).to_bytes(4, "little") + bytes(path, "ascii") + bytes([0]) + marshal.dumps(change)
+        return super().encode(payload)
+
+    def encode_diff(self, diff: Diff):
+        return self.encode(diff.diff_id, diff.path, diff.change)
+
+    def decode(self, payload: bytes):
+        self.diff_id = int.from_bytes(payload[:4], "little")
+        end = payload.find(0, 4)
+        self.path = payload[4:end].decode("ascii")
         self.change = marshal.loads(payload[end + 1:])
         return self
 

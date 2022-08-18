@@ -16,42 +16,42 @@ class BtnStatus:
     combo = 0
 
 
-btnTable: dict[ButtonSymbol, BtnStatus] = {s: BtnStatus() for s in [
+btn_table: dict[ButtonSymbol, BtnStatus] = {s: BtnStatus() for s in [
     LEFT_U, LEFT_R, LEFT_D, LEFT_L,
     RIGHT_U, RIGHT_R, RIGHT_D, RIGHT_L,
     LB, LT, RB, RT,
     SELECT_BTN, START_BTN, MODE_BTN, LEFT_THUMB, RIGHT_THUMB
 ]}
 
-lastOpcontrolTimestamp = 0
+last_opcontrol_timestamp = 0
 
-lastOpcontrolData = {}
+last_opcontrol_data = {}
 
 
 def opcontrolLoop(prepareSymbol: ButtonSymbol = None):
-    global lastOpcontrolTimestamp, lastOpcontrolData
+    global last_opcontrol_timestamp, last_opcontrol_data
 
-    if prepareSymbol is not None and prepareSymbol not in btnTable:
-        btnTable[prepareSymbol] = BtnStatus()
+    if prepareSymbol is not None and prepareSymbol not in btn_table:
+        btn_table[prepareSymbol] = BtnStatus()
 
-    if time.perf_counter() - lastOpcontrolTimestamp < OPCONTROL_SPIN_MINIMUM_INTERVAL:
+    if time.perf_counter() - last_opcontrol_timestamp < OPCONTROL_SPIN_MINIMUM_INTERVAL:
         return
 
-    lastOpcontrolData = dict(gb.read('opcontrol'))  # IMPORTANT: use dict to make a shallow copy
+    last_opcontrol_data = dict(gb.read('opcontrol'))  # IMPORTANT: use dict to make a shallow copy
 
-    for key, _ in lastOpcontrolData['keyboard']['keys'].items():
-        if 'kb:' + key not in btnTable:
-            btnTable['kb:' + key] = BtnStatus()
+    for key, _ in last_opcontrol_data['keyboard']['keys'].items():
+        if 'kb:' + key not in btn_table:
+            btn_table['kb:' + key] = BtnStatus()
 
     # around 0.05ms passed from the beginning of the method
     # we better set the last timestamp here instead of in the beginning of the method to maximize the time difference
-    lastOpcontrolTimestamp = now = time.perf_counter()
+    last_opcontrol_timestamp = now = time.perf_counter()
 
-    for symbol, btn in btnTable.items():
+    for symbol, btn in btn_table.items():
         if type(symbol) is str and symbol.startswith('kb:'):
-            now_pressing = getChannelValue(lastOpcontrolData['keyboard'], 'keys', symbol[3:])
+            now_pressing = getChannelValue(last_opcontrol_data['keyboard'], 'keys', symbol[3:])
         else:
-            now_pressing = getChannelValue(lastOpcontrolData['joystick'], 'btns', symbol)
+            now_pressing = getChannelValue(last_opcontrol_data['joystick'], 'btns', symbol)
 
         if btn.pressing != now_pressing:
             btn.pressing = now_pressing
@@ -80,35 +80,35 @@ def getChannelValue(data: any, typename: str, symbol: ButtonSymbol):
 def getAxis(symbol: ButtonSymbol) -> float:
     opcontrolLoop(symbol)
 
-    return getChannelValue(lastOpcontrolData['joystick'], 'axes', symbol)
+    return getChannelValue(last_opcontrol_data['joystick'], 'axes', symbol)
 
 
 def isBtnPressing(symbol: ButtonSymbol) -> bool:
     opcontrolLoop(symbol)
 
-    return btnTable[symbol].pressing
+    return btn_table[symbol].pressing
 
 
 def isBtnJustPressed(symbol: ButtonSymbol) -> bool:
     opcontrolLoop(symbol)
 
-    return btnTable[symbol].press == lastOpcontrolTimestamp
+    return btn_table[symbol].press == last_opcontrol_timestamp
 
 
 def isBtnJustReleased(symbol: ButtonSymbol) -> bool:
     opcontrolLoop(symbol)
 
-    return btnTable[symbol].release == lastOpcontrolTimestamp
+    return btn_table[symbol].release == last_opcontrol_timestamp
 
 
 def getBtnDuration(symbol: ButtonSymbol) -> float:
     opcontrolLoop(symbol)
 
-    s = btnTable[symbol]
+    s = btn_table[symbol]
     return time.perf_counter() - s.press if s.pressing else 0
 
 
 def getBtnCombo(symbol: ButtonSymbol) -> int:
     opcontrolLoop(symbol)
 
-    return btnTable[symbol].combo
+    return btn_table[symbol].combo

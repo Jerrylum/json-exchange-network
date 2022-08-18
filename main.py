@@ -28,7 +28,8 @@ if __name__ == '__main__':
     [print(p.serial_number, str(p) ) for p in list(serial.tools.list_ports.comports())]
 
     gb.init(pathlib.Path(__file__).parent / "initial.yml")
-    gb.create_server(("127.0.0.1", 7984))
+    gb.join_broadcast(("255.255.255.255", 7986))
+    # gb.create_server(("127.0.0.1", 7984))  # use when needed
     # gb.create_websocket_server(("127.0.0.1", 7985))  # use when needed
 
     processes: dict[str, Process] = {}

@@ -13,16 +13,16 @@ class ClientLikeRole(DiffOrigin):
 
         self.diff_packet_type = MarshalDiffPacket
 
-        self.watching: set[str] = set(["", "*"])
+        self.watching: set[str] = set(["255.255.255.255", "*"])
 
         self.conn_id: str = "(unknown)"
         self.state: int = 0  # 0 = Registering, 1 = Running
 
     def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
         if early:
-            self.ignored_diff_id.add(diff.uuid)
-        elif diff.uuid in self.ignored_diff_id:
-            self.ignored_diff_id.remove(diff.uuid)
+            self.ignored_diff_id.add(diff.diff_id)
+        elif diff.diff_id in self.ignored_diff_id:
+            self.ignored_diff_id.remove(diff.diff_id)
             return
 
         if self.state == 0:
@@ -135,12 +135,12 @@ class Gateway(DiffOrigin):
         last_handled = None
         for i in range(consts.DIFF_QUEUE_SIZE, 0, -1):
             diff = all_diffs[i - 1]
-            if diff.uuid == self.last_handled_diff_id or diff.uuid == 0:
+            if diff.diff_id == self.last_handled_diff_id or diff.diff_id == 0:
                 break
             if last_handled is None:
-                last_handled = diff.uuid
-            if diff.uuid in self.ignored_diff_id:
-                self.ignored_diff_id.remove(diff.uuid)
+                last_handled = diff.diff_id
+            if diff.diff_id in self.ignored_diff_id:
+                self.ignored_diff_id.remove(diff.diff_id)
                 continue
             diffs.insert(0, diff)
 
@@ -154,7 +154,7 @@ class Gateway(DiffOrigin):
 
     def _sync(self):
         for f in self._filter_final_sync():
-            packet = self.diff_packet_type().encode(f.path, f.change)
+            packet = self.diff_packet_type().encode_diff(f)
             self._sync_exact_match(f, packet)
 
     def _sync_thread(self):

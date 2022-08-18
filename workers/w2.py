@@ -4,7 +4,9 @@ from jen import *
 def run(worker: WorkerController):
     worker.init()
 
-    gb.connect_server(("127.0.0.1", 7984))
+    gb.join_broadcast(("255.255.255.255", 7986))
+    # gb.connect_websocket_server(("127.0.0.1", 7985))
+    # gb.connect_server(("127.0.0.1", 7984))
     
     # print("{} {} {} {} {}".format(
     #     isBtnPressing(RIGHT_U),

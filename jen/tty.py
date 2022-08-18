@@ -1,8 +1,5 @@
 import serial
 import serial.tools.list_ports
-import time
-import threading
-import os
 
 from .gateway import *
 from serial.tools.list_ports_common import ListPortInfo

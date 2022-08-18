@@ -1,8 +1,4 @@
-import uuid
 import socket
-import threading
-import time
-import uuid
 
 from .gateway import *
 
@@ -47,7 +43,7 @@ class UDPServer(ServerLikeRole, Gateway):
 
             while self.started:
                 try:
-                    in_raw, addr = s.recvfrom(2048)
+                    in_raw, addr = s.recvfrom(consts.PACKET_MAXIMUM_SIZE)
 
                     if addr not in self.connections:
                         self.connections[addr] = UDPConnection(addr, self)

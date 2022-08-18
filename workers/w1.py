@@ -8,7 +8,7 @@ def run(worker: WorkerController):
     sm.whitelist.append(PortInfo(serial_number="5513132373735171A0B1", baudrate=115200))
     sm.whitelist.append(PortInfo(serial_number="7513131383235170F071", baudrate=115200))
 
-    gb.connect_server(("127.0.0.1", 7984))
+    gb.join_broadcast(("255.255.255.255", 7986))
 
     gen_output = gb.clone("rg.o")
     shooter_output = gb.clone("rs.o")

@@ -1,6 +1,7 @@
 
 import logging
 import threading
+import os
 import time
 import uuid
 
@@ -55,18 +56,18 @@ class TpsCounter:
 class Diff:
 
     def __init__(self, uuid: int, path: str, change: any):
-        self.uuid: int = uuid
+        self.diff_id: int = uuid
         self.path: str = path
         self.change = change
 
     def __eq__(self, other):
         if type(other) is type(self):
-            return self.uuid == other.uuid
+            return self.diff_id == other.diff_id
         else:
             return False
 
     def __hash__(self):
-        return self.uuid
+        return self.diff_id
 
     def match(self, path: str):
         return self.path == path or (path.endswith("*") and self.path.startswith(path[:-1]))
@@ -110,7 +111,7 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt, "%s.%03d" % ("%H:%M:%S", record.msecs))
         return formatter.format(record)
 
-    def getLoggerHandler():
+    def get_logger_handler():
         handler = logging.StreamHandler()
         handler.setLevel(logging.INFO)
         handler.setFormatter(CustomFormatter())
@@ -118,9 +119,8 @@ class CustomFormatter(logging.Formatter):
 
 
 logger = logging.getLogger("Main")
-logger.name
 logger.setLevel(logging.DEBUG)
-logger.addHandler(CustomFormatter.getLoggerHandler())
+logger.addHandler(CustomFormatter.get_logger_handler())
 # fh = logging.FileHandler('latest.log')
 # fh.setLevel(logging.DEBUG)
 # logger.addHandler(fh)

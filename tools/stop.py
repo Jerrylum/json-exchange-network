@@ -5,7 +5,8 @@ sys.path.insert(1, './')
 
 from jen import *
 
-client = gb.connect_server(("127.0.0.1", 7984))
-client.write(DiffPacket().encode("stop", True))
+b = gb.join_broadcast(("255.255.255.255", 7986))
+gb.early_gateways.append(b)
+gb.write("stop", True)
 
 os._exit(0)

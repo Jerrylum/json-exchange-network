@@ -43,6 +43,7 @@
         "pygame",
         "REUSEADDR",
         "SIGTERM",
+        "udpb",
         "unpackb",
         "websockets"
     ]
