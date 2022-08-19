@@ -13,7 +13,7 @@ class ClientLikeRole(DiffOrigin):
 
         self.diff_packet_type = MarshalDiffPacket
 
-        self.watching: set[str] = set(["255.255.255.255", "*"])
+        self.watching: set[str] = set(["", "*"])
 
         self.conn_id: str = "(unknown)"
         self.state: int = 0  # 0 = Registering, 1 = Running

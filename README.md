@@ -288,3 +288,12 @@ Make sure you setup your git
 git config --global user.name ""
 git config --global user.email ""
 ```
+
+
+Install pytest
+```
+pip3 install -U pytest
+pip3 install pytest-cov
+
+pytest --cov=jen --cov-report html:cov_html tests/
+```

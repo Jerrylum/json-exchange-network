@@ -37,21 +37,20 @@ def opcontrolLoop(prepareSymbol: ButtonSymbol = None):
     if time.perf_counter() - last_opcontrol_timestamp < OPCONTROL_SPIN_MINIMUM_INTERVAL:
         return
 
-    last_opcontrol_data = dict(gb.read('opcontrol'))  # IMPORTANT: use dict to make a shallow copy
-
-    for key, _ in last_opcontrol_data['keyboard']['keys'].items():
-        if 'kb:' + key not in btn_table:
-            btn_table['kb:' + key] = BtnStatus()
+    last_opcontrol_data = dict(gb.read("opcontrol"))  # IMPORTANT: use dict to make a shallow copy
+    for key, _ in last_opcontrol_data["keyboard"]["keys"].items():
+        if "kb:" + key not in btn_table:
+            btn_table["kb:" + key] = BtnStatus()
 
     # around 0.05ms passed from the beginning of the method
     # we better set the last timestamp here instead of in the beginning of the method to maximize the time difference
     last_opcontrol_timestamp = now = time.perf_counter()
 
     for symbol, btn in btn_table.items():
-        if type(symbol) is str and symbol.startswith('kb:'):
-            now_pressing = getChannelValue(last_opcontrol_data['keyboard'], 'keys', symbol[3:])
+        if type(symbol) is str and symbol.startswith("kb:"):
+            now_pressing = getChannelValue(last_opcontrol_data["keyboard"], "keys", symbol[3:])
         else:
-            now_pressing = getChannelValue(last_opcontrol_data['joystick'], 'btns', symbol)
+            now_pressing = getChannelValue(last_opcontrol_data["joystick"], "btns", symbol)
 
         if btn.pressing != now_pressing:
             btn.pressing = now_pressing
@@ -80,7 +79,7 @@ def getChannelValue(data: any, typename: str, symbol: ButtonSymbol):
 def getAxis(symbol: ButtonSymbol) -> float:
     opcontrolLoop(symbol)
 
-    return getChannelValue(last_opcontrol_data['joystick'], 'axes', symbol)
+    return getChannelValue(last_opcontrol_data["joystick"], "axes", symbol)
 
 
 def isBtnPressing(symbol: ButtonSymbol) -> bool:

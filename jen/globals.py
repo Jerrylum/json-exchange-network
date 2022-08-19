@@ -29,7 +29,7 @@ def read(path: str) -> Union[any, None]:
     data = share
     try:
         if path == "":
-            return {path: gb.read(path) for path in data if not path.startswith("_")}
+            return data
         for key in path.split("."):
             data = data[int(key)] if key.isdigit() else data[key]
         return data
@@ -47,44 +47,46 @@ def clone(path: str):
     return copy.deepcopy(read(path))
 
 
-def _write(parent, cn, path: str, val: any):
+def _write(parent: any, sub_paths: list[str], val: any):
     """
     Write a value to an object or array. Create the path if it does not exist.
 
     :param parent: The parent object.
-    :param cn: The path separated by ".".
-    :param path: The path to the value.
+    :param sub_paths: The path separated by ".".
     :param val: The value.
     """
-    if not hasattr(parent, "__getitem__"):
-        raise KeyError('Trying to subscribe but parent is not a list or dict. On path "%s" via "%s"' % (
-            path, ".".join(cn)))
 
-    current = cn[0]
+    def get_valid_index(key: str):
+        if not key.isdecimal():
+            return None
+        num = int(key)
+        if str(num) != key or num < 0:
+            return None
+        return num
+
+    is_list, is_dict = isinstance(parent, list), isinstance(parent, dict)
+    current = sub_paths[0]
+
+    if not is_list and not is_dict:
+        raise KeyError('Trying to subscribe "%s" but parent is not a list or dict.' % current)
+
     make_current = False
-    if hasattr(parent, "append"):  # is list
-        if not current.isdigit():
-            raise KeyError('The parent is a list but key is not a number. On path "%s" via "%s"' % (
-                path, ".".join(cn)))
-        current = int(current)
+    if is_list:
+        current = get_valid_index(current)
+        if current is None:
+            raise KeyError('The parent is a list but key "%s" is not a valid index.' % sub_paths[0])
         if not current < len(parent):
             parent.extend([None] * (current - len(parent) + 1))
             make_current = True
-    else:  # TODO: raise KeyError if current is a number but parent is a dict
-        make_current = not current in parent  # or parent[current] is None
+    else:
+        make_current = current not in parent  # or parent[current] is None
 
-    if len(cn) == 1:
-        ans = val
-        if callable(val):
-            parm = dict() if make_current else parent[current]
-            val(parm)  # TODO: remove this line
-            ans = parm
-        parent[current] = ans
+    if len(sub_paths) == 1:
+        parent[current] = val
     else:
         if make_current:
-            parent[current] = list() if cn[1].isdigit() else dict()
-        parent[current] = _write(parent[current], cn[1:], path, val)
-    return parent
+            parent[current] = list() if get_valid_index(sub_paths[1]) is not None else dict()
+        _write(parent[current], sub_paths[1:], val)
 
 
 def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin] = None):
@@ -109,7 +111,10 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin] = N
 
     nodes = path.split(".")
 
-    if read(path) == val:
+    old_val = read(path)
+    if old_val == val:
+        if (isinstance(old_val, list) or isinstance(old_val, dict)) and old_val is val:
+            raise ValueError("Cache pollution, old value is the same as new value. Use copy.deepcopy() before passing to write().")
         return
 
     diff = Diff.build(path, val)
@@ -123,7 +128,7 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin] = N
         share = val
         logger.info("Global overwritten")
     else:
-        _write(share, nodes, path, val)
+        _write(share, nodes, val)
 
     # XXX: FIXING: race condition might occur
     with sync_condition:

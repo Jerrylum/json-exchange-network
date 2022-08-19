@@ -13,22 +13,11 @@ PkgIdxType = Union[int, bytes]
 
 class PacketEncoder:
 
-    def normalize_pkg_type(pkg_type: PkgIdxType) -> bytes:
-        """Normalize pkg type to bytes"""
-        if not isinstance(pkg_type, (int, bytes)):
-            raise ValueError("Packet type must be int (0-255) or byte")
-        if isinstance(pkg_type, int):
-            pkg_type = bytes([pkg_type])
-        if len(pkg_type) != 1:
-            raise ValueError("Packet type must be exactly one byte")
-        return pkg_type
-
-    def pack(pkg_type: PkgIdxType, data_in: bytes) -> bytes:
+    def pack(pkg_type: int, data_in: bytes) -> bytes:
         """Pack into msgpacketizer compatible binary, does not include the field separator null byte"""
-        pkg_type = PacketEncoder.normalize_pkg_type(pkg_type)
         check = crc8.crc8()
         check.update(data_in)
-        return cobs.encode(pkg_type + data_in + check.digest())
+        return cobs.encode(bytes([pkg_type]) + data_in + check.digest())
 
     def unpack(bytes_in: bytes) -> Tuple[int, bytes]:
         """unpack from msgpacketizer binary, can deal with the trailing/preceding null byte if needed"""
@@ -79,7 +68,7 @@ class DiffPacket(Packet):
         end = payload.find(0)
         self.path = payload[:end].decode("ascii")
         self.change = msgpack.unpackb(payload[end + 1:], use_list=True)
-        return self
+        return super().decode(payload)
 
 
 class MarshalDiffPacket(Packet):
@@ -99,7 +88,7 @@ class MarshalDiffPacket(Packet):
         end = payload.find(0)
         self.path = payload[:end].decode("ascii")
         self.change = marshal.loads(payload[end + 1:])
-        return self
+        return super().decode(payload)
 
 
 class MarshalDiffBroadcastPacket(Packet):
@@ -121,7 +110,7 @@ class MarshalDiffBroadcastPacket(Packet):
         end = payload.find(0, 4)
         self.path = payload[4:end].decode("ascii")
         self.change = marshal.loads(payload[end + 1:])
-        return self
+        return super().decode(payload)
 
 
 class DownstreamBoundPacket(Packet):
@@ -152,12 +141,12 @@ class DebugMessageD2UPacket(UpstreamBoundPacket):
     def encode(self, message: str):
         self.message = message
 
-        payload = bytes(message, "ascii")
+        payload = bytes(message, "ascii") + bytes([0])
         return super().encode(payload)
 
     def decode(self, payload: bytes):
         self.message = payload.decode("ascii")[:-1]
-        return self
+        return super().decode(payload)
 
 
 class HelloD2UPacket(UpstreamBoundPacket):
