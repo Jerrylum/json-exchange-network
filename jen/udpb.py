@@ -19,9 +19,9 @@ class UDPBroadcast(Gateway):
         self.started = True
         
         self.s = s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR if os.name == "nt" else socket.SO_REUSEPORT, 1)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        s.bind(self.network_address)
+        s.bind(("", self.network_address[1]) if os.name == "nt" else self.network_address)
 
         def read_thread():
             logger.info("UDP broadcast started on %s:%d", *self.network_address)
@@ -61,4 +61,4 @@ class UDPBroadcast(Gateway):
         self.write(packet)
 
     def write(self, packet: MarshalDiffBroadcastPacket):
-        self.s.sendto(packet.data, self.network_address)
+        self.s.sendto(packet.data, ("<broadcast>", 7986))
