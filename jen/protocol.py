@@ -38,8 +38,7 @@ class PacketEncoder:
 
 
 class Packet:
-    data: bytes
-    payload: bytes
+    PACKET_ID = 256
 
     def encode(self, payload: bytes):
         self.payload = payload
@@ -157,3 +156,29 @@ class HelloD2UPacket(UpstreamBoundPacket):
 
     def decode(self, payload: bytes):
         return super().decode(payload)
+
+
+class DiffOrigin:
+
+    def __init__(self):
+        self.ignored_diff_id: set[int] = set()
+        self.diff_packet_type: type[Packet] = None
+
+    def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
+        pass
+
+
+class PacketOrigin:
+
+    def _decode_packet(self, in_raw: bytes, available_packets: list[type[Packet]]) -> Packet:
+        packet_id, data = PacketEncoder.unpack(in_raw)
+        # might raise IndexError
+        packet_class: type[Packet] = [p for p in available_packets if p.PACKET_ID == packet_id][0]
+        return packet_class().decode(data)
+
+    def read(self, in_raw: bytes):
+        pass
+
+    def write(self, packet: Packet):
+        pass
+

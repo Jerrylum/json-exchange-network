@@ -82,13 +82,6 @@ class Diff:
         return Diff(uuid.uuid4().int >> (128 - 32), path, change)
 
 
-class DiffOrigin:
-
-    def __init__(self):
-        self.ignored_diff_id: set[int] = set()
-        self.diff_packet_type = None
-
-
 class CustomFormatter(logging.Formatter):
     grey = "\x1b[38;20m"
     yellow = "\x1b[33;20m"

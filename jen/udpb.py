@@ -3,7 +3,7 @@ import socket
 from .gateway import *
 
 
-class UDPBroadcast(Gateway):
+class UDPBroadcast(Gateway, PacketOrigin):
 
     def __init__(self, addr: Address, listen=True):
         Gateway.__init__(self)
@@ -30,19 +30,7 @@ class UDPBroadcast(Gateway):
                 try:
                     in_raw, addr = s.recvfrom(consts.PACKET_MAXIMUM_SIZE)
 
-                    packet_id, data = PacketEncoder.unpack(in_raw)
-
-                    available_packets = [MarshalDiffBroadcastPacket]
-                    packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]
-
-                    packet = packet_class().decode(data)
-
-                    if packet_class is MarshalDiffBroadcastPacket:
-                        if any(packet.diff_id == d.diff_id for d in gb.diff_queue):
-                            continue
-
-                        gb.write(packet.path, packet.change, False, self)
-
+                    self.read(in_raw)
                 except BaseException:
                     print("error buffer", in_raw)
                     logger.error("Error in broadcast read thread", exc_info=True)
@@ -60,5 +48,15 @@ class UDPBroadcast(Gateway):
 
         self.write(packet)
 
+    def read(self, in_raw: bytes):
+        packet = self._decode_packet(in_raw, [MarshalDiffBroadcastPacket])
+        packet_class = type(packet)
+
+        if packet_class is MarshalDiffBroadcastPacket:
+            if any(packet.diff_id == d.diff_id for d in gb.diff_queue):
+                return
+
+            gb.write(packet.path, packet.change, False, self)
+
     def write(self, packet: MarshalDiffBroadcastPacket):
-        self.s.sendto(packet.data, ("<broadcast>", 7986))
+        self.s.sendto(packet.data, ("<broadcast>", self.network_address[1]))

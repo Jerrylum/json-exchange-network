@@ -6,10 +6,10 @@ from .tools import *
 import jen.globals as gb
 
 
-class ClientLikeRole(DiffOrigin):
+class ClientLikeRole(PacketOrigin, DiffOrigin):
 
     def __init__(self):
-        DiffOrigin.__init__(self)
+        PacketOrigin.__init__(self)
 
         self.diff_packet_type = MarshalDiffPacket
 
@@ -33,12 +33,6 @@ class ClientLikeRole(DiffOrigin):
                 self.write(packet)
                 break
 
-    def read(self, in_raw: bytes):
-        pass
-
-    def write(self, packet: Packet):
-        pass
-
     def update_watch(self):
         gb.write("conn." + self.conn_id + ".watch", list(self.watching))
 
@@ -49,12 +43,8 @@ class UpstreamRole(ClientLikeRole):
         ClientLikeRole.__init__(self)
 
     def read(self, in_raw: bytes):
-        packet_id, data = PacketEncoder.unpack(in_raw)
-
-        available_packets = [HelloD2UPacket, DiffPacket, MarshalDiffPacket, DebugMessageD2UPacket]
-        packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]
-
-        packet = packet_class().decode(data)
+        packet = self._decode_packet(in_raw, [HelloD2UPacket, DiffPacket, MarshalDiffPacket, DebugMessageD2UPacket])
+        packet_class = type(packet)
 
         if packet_class is HelloD2UPacket:
             logger.info("Send Identity to \"%s\" gateway" % self.conn_id)
@@ -86,12 +76,8 @@ class DownstreamRole(ClientLikeRole):
         ClientLikeRole.__init__(self)
 
     def read(self, in_raw: bytes):
-        packet_id, data = PacketEncoder.unpack(in_raw)
-
-        available_packets = [GatewayIdentityU2DPacket, DiffPacket, MarshalDiffPacket]
-        packet_class = [p for p in available_packets if p.PACKET_ID == packet_id][0]
-
-        packet = packet_class().decode(data)
+        packet = self._decode_packet(in_raw, [GatewayIdentityU2DPacket, DiffPacket, MarshalDiffPacket])
+        packet_class = type(packet)
 
         if packet_class is GatewayIdentityU2DPacket and self.state == 0:
             self.conn_id = packet.conn_id
@@ -110,7 +96,7 @@ class DownstreamRole(ClientLikeRole):
             gb.write(packet.path, packet.change, False, self)
 
 
-class ServerLikeRole:
+class ServerLikeRole(DiffOrigin):
 
     def __init__(self):
         self.connections: dict[any, UpstreamRole] = {}
@@ -148,9 +134,6 @@ class Gateway(DiffOrigin):
             self.last_handled_diff_id = last_handled
 
         return diffs
-
-    def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
-        pass
 
     def _sync(self):
         for f in self._filter_final_sync():
