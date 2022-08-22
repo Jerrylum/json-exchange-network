@@ -28,12 +28,16 @@ class UDPBroadcast(Gateway, PacketOrigin):
 
             while self.started:
                 try:
+                    in_raw = None
                     in_raw, addr = s.recvfrom(consts.PACKET_MAXIMUM_SIZE)
 
                     self.read(in_raw)
                 except BaseException:
-                    print("error buffer", in_raw)
-                    logger.error("Error in broadcast read thread", exc_info=True)
+                    if self.s is None:
+                        logger.info("Server read thread closed")
+                    else:
+                        print("error buffer", in_raw)
+                        logger.error("Error in broadcast read thread", exc_info=True)
 
         if self.listen:
             threading.Thread(target=read_thread).start()
@@ -42,9 +46,6 @@ class UDPBroadcast(Gateway, PacketOrigin):
     def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
         if early:
             self.ignored_diff_id.add(diff.diff_id)
-        elif diff.diff_id in self.ignored_diff_id:
-            self.ignored_diff_id.remove(diff.diff_id)
-            return
 
         self.write(packet)
 
@@ -60,3 +61,12 @@ class UDPBroadcast(Gateway, PacketOrigin):
 
     def write(self, packet: MarshalDiffBroadcastPacket):
         self.s.sendto(packet.data, ("<broadcast>", self.network_address[1]))
+
+    def stop(self):
+        Gateway.stop(self)
+        if self.s is not None:
+            try:
+                self.s.shutdown(socket.SHUT_RDWR)
+            except:
+                pass
+            self.s = None

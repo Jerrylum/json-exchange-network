@@ -35,8 +35,9 @@ class WebsocketServer(ServerLikeRole, Gateway):
         self.server_addr: Address = addr
 
         self.connections: dict[uuid.UUID, WebsocketConnection] = {}
+        self.stop_event: threading.Event = None
 
-    def start_listening(self):
+    def start(self):
         if self.started:
             return
         self.started = True
@@ -48,9 +49,11 @@ class WebsocketServer(ServerLikeRole, Gateway):
             logger.info("Websocket connection %s is established" % ws.id)
 
             try:
-                while True:
+                while self.started:
                     conn.read(await conn.ws.recv())
             except websockets.exceptions.ConnectionClosed:
+                pass
+            except websockets.exceptions.ConnectionClosedOK:
                 pass
             except:
                 logger.error("Error in server read thread", exc_info=True)
@@ -61,13 +64,22 @@ class WebsocketServer(ServerLikeRole, Gateway):
 
         def main_thread():
             async def main():
-                async with websockets.serve(connection_handler, self.server_addr[0], self.server_addr[1]):
-                    await asyncio.Future()
+                self.stop_event = threading.Event()
+                stop = asyncio.get_event_loop().run_in_executor(None, self.stop_event.wait)
+
+                async with websockets.serve(connection_handler, self.server_addr[0], self.server_addr[1]) as self.s:
+                    await stop
             asyncio.run(main())
 
         threading.Thread(target=main_thread).start()
         threading.Thread(target=self._sync_thread).start()
 
+    def stop(self):
+        Gateway.stop(self)
+        if self.s:
+            self.stop_event.set()
+            self.s = None
+        
 
 class WebsocketClient(DownstreamRole, Gateway):
 
@@ -110,20 +122,31 @@ class WebsocketClient(DownstreamRole, Gateway):
                             self.s = ws
                             await self._write(HelloD2UPacket().encode())
 
-                            while True:
+                            while self.started:
                                 self.read(await ws.recv())
                     except ConnectionRefusedError:
                         logger.warning("Websocket connection refused")
+                    except websockets.exceptions.ConnectionClosedOK:
+                        pass
                     except websockets.exceptions.ConnectionClosedError:
                         logger.warning("Websocket connection is closed unexpectedly")
                     except:
                         logger.error("Error in \"%s\" read thread" % self.conn_id, exc_info=True)
-                        logger.warning("Websocket connection is closed")
                     finally:
                         self.state = 0
                         time.sleep(consts.CONNECTION_RETRY_DELAY)
+                        logger.warning("Websocket connection is closed")
 
             asyncio.run(client_job())
 
         threading.Thread(target=client_read_thread).start()
         threading.Thread(target=self._sync_thread).start()
+
+    async def _stop(self):
+        if self.s:
+            await self.s.close()
+            self.s = None
+
+    def stop(self):
+        Gateway.stop(self)
+        asyncio.run_coroutine_threadsafe(self._stop(), loop=self.event_loop)

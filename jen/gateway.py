@@ -10,18 +10,21 @@ class ClientLikeRole(PacketOrigin, DiffOrigin):
 
     def __init__(self):
         PacketOrigin.__init__(self)
+        DiffOrigin.__init__(self)
 
         self.diff_packet_type = MarshalDiffPacket
 
         self.watching: set[str] = set(["", "*"])
 
         self.conn_id: str = "(unknown)"
-        self.state: int = 0  # 0 = Registering, 1 = Running
+        self.state: int = 0  # 0 = Registering, 1 = Running, 2 = Stopped
 
     def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
+        # The diff must be recorded in the diff_queue even if the client is not ready to receive it
         if early:
             self.ignored_diff_id.add(diff.diff_id)
         elif diff.diff_id in self.ignored_diff_id:
+            # It is possible to handle ignored diffs here since an upstream doesn't have its own filter
             self.ignored_diff_id.remove(diff.diff_id)
             return
 
@@ -51,7 +54,9 @@ class UpstreamRole(ClientLikeRole):
 
             self.write(GatewayIdentityU2DPacket().encode(self.conn_id))
         elif packet_class is DiffPacket or packet_class is MarshalDiffPacket:
-            watcher_path = "conn." + self.conn_id + ".watch"
+            conn_profile_path = "conn." + self.conn_id
+            watcher_path = conn_profile_path + ".watch"
+
             if watcher_path.startswith(packet.path):
                 old_watchers = set(gb.read(watcher_path) or [])
 
@@ -61,6 +66,9 @@ class UpstreamRole(ClientLikeRole):
                 for watcher in self.watching - old_watchers:
                     if not watcher.endswith("*"):
                         self.write(self.diff_packet_type().encode(watcher, gb.read(watcher)))
+
+                if gb.read(conn_profile_path) is None:
+                    self.state = 2
             else:
                 gb.write(packet.path, packet.change, False, self)
         elif packet_class is DebugMessageD2UPacket:
@@ -102,6 +110,10 @@ class ServerLikeRole(DiffOrigin):
         self.connections: dict[any, UpstreamRole] = {}
 
     def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
+        if early:
+            # If and only if a write() call is made, the diff is recorded by the server
+            self.ignored_diff_id.add(diff.diff_id)
+
         [self.connections[k]._sync_exact_match(diff, packet, False) for k in list(self.connections)]
 
 
@@ -146,6 +158,14 @@ class Gateway(DiffOrigin):
             with gb.sync_condition:
                 gb.sync_condition.wait()
 
+    def start(self):
+        pass
+
+    def stop(self):
+        self.started = False
+        with gb.sync_condition:
+            gb.sync_condition.notify_all()
+
 
 class GatewayManager:
 
@@ -165,6 +185,7 @@ class WorkerController:
         logger.info("Worker \"%s\" registered" % self.display_name)
 
     def init(self):
+        gb.diff_queue = [Diff.placeholder()] * consts.DIFF_QUEUE_SIZE
         gb.sync_condition = threading.Condition()
         gb.share = self.shared_data
         gb.current_worker = self
@@ -173,7 +194,7 @@ class WorkerController:
 
         logger.name = self.display_name
 
-        logger.info("Worker started")
+        logger.info("Worker started %s" % os.getpid())
 
     def use_clock(self, frequency: int, busy_wait=False, offset=0.0004):
         self.clock = Clock(frequency, busy_wait, offset)

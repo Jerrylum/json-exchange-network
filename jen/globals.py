@@ -157,7 +157,7 @@ def create_server(addr: Address):
     from jen.udp import UDPServer
 
     server = UDPServer(addr)
-    server.start_listening()
+    server.start()
     gateways.append(server)
     return server
 
@@ -175,7 +175,7 @@ def create_websocket_server(addr: Address):
     from jen.ws import WebsocketServer
 
     server = WebsocketServer(addr)
-    server.start_listening()
+    server.start()
     gateways.append(server)
     return server
 

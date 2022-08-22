@@ -93,7 +93,7 @@ class SerialConnection(UpstreamRole, Gateway):
         threading.Thread(target=self._sync_thread).start()
 
     def stop(self):
-        self.started = False
+        Gateway.stop(self)
         self.s.close()
 
 

@@ -17,6 +17,13 @@ class UDPConnection(UpstreamRole):
     def write(self, packet: Packet):
         self.server.s.sendto(packet.data, self.addr)
 
+    def _sync_exact_match(self, diff: Diff, packet: Packet, early: bool = False):
+        if self.state == 2:
+            del self.server.connections[self.addr]
+            return
+
+        UpstreamRole._sync_exact_match(self, diff, packet, early)
+
 
 class UDPServer(ServerLikeRole, Gateway):
 
@@ -29,7 +36,7 @@ class UDPServer(ServerLikeRole, Gateway):
 
         self.connections: dict[Address, UDPConnection] = {}
 
-    def start_listening(self):
+    def start(self):
         if self.started:
             return
         self.started = True
@@ -50,11 +57,24 @@ class UDPServer(ServerLikeRole, Gateway):
 
                     self.connections[addr].read(in_raw)
                 except BaseException:
-                    print("error buffer", in_raw)
-                    logger.error("Error in server read thread", exc_info=True)
+                    if self.s is None:
+                        logger.info("Server read thread closed")
+                    else:
+                        print("error buffer", in_raw)
+                        logger.error("Error in server read thread", exc_info=True)
 
         threading.Thread(target=server_thread).start()
         threading.Thread(target=self._sync_thread).start()
+
+    def stop(self):
+        Gateway.stop(self)
+        if self.s is not None:
+            try:
+                self.s.shutdown(socket.SHUT_RDWR)
+            except:
+                pass
+            self.s = None
+
 
 
 class UDPClient(DownstreamRole, Gateway):
@@ -89,6 +109,7 @@ class UDPClient(DownstreamRole, Gateway):
                         last_hello_attempt = time.perf_counter()
                         self.write(HelloD2UPacket().encode())
 
+                    in_raw = None
                     in_raw, _ = self.s.recvfrom(consts.PACKET_MAXIMUM_SIZE)
                     self.read(in_raw)
                 except (TimeoutError, socket.timeout):
@@ -101,3 +122,12 @@ class UDPClient(DownstreamRole, Gateway):
 
         threading.Thread(target=client_read_thread).start()
         threading.Thread(target=self._sync_thread).start()
+
+    def stop(self):
+        Gateway.stop(self)
+        if self.s is not None:
+            try:
+                self.s.shutdown(socket.SHUT_RDWR)
+            except:
+                pass
+            self.s = None
