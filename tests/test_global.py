@@ -4,6 +4,7 @@ sys.path.insert(1, './')
 from jen import *
 from cmath import nan
 import random
+import pathlib
 import pytest
 
 
@@ -171,6 +172,7 @@ def test_write_no_cache_pollution():
     with pytest.raises(ValueError) as k:
         gb.write("test", test)
 
+
 def test_read_write_clone_function():
     test = {"test": 123.45}
     gb.write("", test)
@@ -183,3 +185,13 @@ def test_read_write_clone_function():
     assert gb.share["something"] is test
     assert gb.read("something") is test
     assert gb.clone("something") is not test
+
+
+def test_yml_read():
+    gb.init(pathlib.Path(__file__).parent.parent / "initial.yml")
+
+    with pytest.raises(BaseException):
+        gb.init(pathlib.Path(__file__).parent / "not_found.yml")
+
+    with pytest.raises(BaseException):
+        gb.init(pathlib.Path(__file__).parent / "test.yml")

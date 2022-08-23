@@ -27,12 +27,12 @@ class WebsocketConnection(UpstreamRole):
 
 class WebsocketServer(ServerLikeRole, Gateway):
 
-    def __init__(self, addr: Address):
+    def __init__(self, ip: str, port: int):
         ServerLikeRole.__init__(self)
         Gateway.__init__(self)
 
         self.s: any = None
-        self.server_addr: Address = addr
+        self.server_addr: Address = (ip, port)
 
         self.connections: dict[uuid.UUID, WebsocketConnection] = {}
         self.stop_event: threading.Event = None
@@ -83,13 +83,13 @@ class WebsocketServer(ServerLikeRole, Gateway):
 
 class WebsocketClient(DownstreamRole, Gateway):
 
-    def __init__(self, addr: Address):
+    def __init__(self, ip: str, port: int):
         DownstreamRole.__init__(self)
         Gateway.__init__(self)
 
         self.s: any = None
 
-        self.server_addr = addr
+        self.server_addr = (ip, port)
         self.write_lock = threading.Lock()
         self.event_loop: asyncio.AbstractEventLoop = None
 

@@ -5,11 +5,11 @@ from .gateway import *
 
 class UDPBroadcast(Gateway, PacketOrigin):
 
-    def __init__(self, addr: Address, listen=True):
+    def __init__(self, ip: str, port: int, listen=True):
         Gateway.__init__(self)
 
         self.s: socket.socket = None
-        self.network_address: Address = addr
+        self.network_address: Address = (ip, port)
         self.diff_packet_type = MarshalDiffBroadcastPacket
         self.listen = listen
 
@@ -17,7 +17,7 @@ class UDPBroadcast(Gateway, PacketOrigin):
         if self.started:
             return
         self.started = True
-        
+
         self.s = s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR if os.name == "nt" else socket.SO_REUSEPORT, 1)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)

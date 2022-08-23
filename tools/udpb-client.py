@@ -7,7 +7,7 @@ from jen import *
 
 
 gb.init("initial.yml")
-gb.join_broadcast(("255.255.255.255", 7986))
+gb.start_gateway(UDPBroadcast("255.255.255.255", 7986))
 
 try:
     while True:

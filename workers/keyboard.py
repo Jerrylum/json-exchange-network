@@ -6,8 +6,8 @@ from jen import *
 def run(worker: WorkerController):
     worker.init()
 
-    client = gb.join_broadcast(("255.255.255.255", 7986), False)
-    # client = gb.connect_server(("127.0.0.1", 7984))
+    client = gb.start_gateway(UDPBroadcast("255.255.255.255", 7986, False))
+    # client = gb.start_gateway(UDPClient("127.0.0.1", 7984))
     # client.watching = set(["process.main.update", "opcontrol.keyboard.keys.*"])
     gb.early_gateways.append(client)
 

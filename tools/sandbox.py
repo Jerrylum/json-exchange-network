@@ -7,7 +7,7 @@ from jen import *
 
 
 gb.init("initial.yml")
-gb.connect_server(("127.0.0.1", 7984))
+gb.start_gateway(UDPClient("127.0.0.1", 7984))
 
 try:
     time.sleep(1)

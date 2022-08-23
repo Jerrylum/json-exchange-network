@@ -153,49 +153,15 @@ def init(initial_yml_file: Union[str, pathlib.Path]):
             raise
 
 
-def create_server(addr: Address):
-    from jen.udp import UDPServer
+def start_gateway(gateway: Gateway):
+    """
+    Start a gateway.
 
-    server = UDPServer(addr)
-    server.start()
-    gateways.append(server)
-    return server
-
-
-def connect_server(addr: Address):
-    from jen.udp import UDPClient
-
-    client = UDPClient(addr)
-    client.start()
-    gateways.append(client)
-    return client
-
-
-def create_websocket_server(addr: Address):
-    from jen.ws import WebsocketServer
-
-    server = WebsocketServer(addr)
-    server.start()
-    gateways.append(server)
-    return server
-
-
-def connect_websocket_server(addr: Address):
-    from jen.ws import WebsocketClient
-
-    client = WebsocketClient(addr)
-    client.start()
-    gateways.append(client)
-    return client
-
-
-def join_broadcast(addr: Address, listen= True):
-    from jen.udpb import UDPBroadcast
-
-    client = UDPBroadcast(addr, listen)
-    client.start()
-    gateways.append(client)
-    return client
+    :param gateway: The gateway to start.
+    """
+    gateways.append(gateway)
+    gateway.start()
+    return gateway
 
 
 def mainloop(processes: dict[str, Process]):

@@ -281,6 +281,8 @@ def test_server_sync_matched():
     assert u2._sync_count == consts.DIFF_QUEUE_SIZE + 7
     assert u2._write_count == consts.DIFF_QUEUE_SIZE + 7
 
+    u1.read(DebugMessageD2UPacket().encode("debug").data)
+
 
 def test_abstract_methods():
     g = Gateway()
@@ -298,3 +300,14 @@ def test_abstract_methods():
     p.write(None)
 
     dp = DiffPacket().encode_diff(Diff.placeholder())
+
+    wc = WorkerController("name", None)
+    wc.init()
+    wc.use_clock(100)
+    wc.use_serial_manager()
+
+    a = time.perf_counter()
+    wc.spin()
+    wc.spin()
+    b = time.perf_counter()
+    assert b - a > 0.02

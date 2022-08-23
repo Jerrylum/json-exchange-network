@@ -7,7 +7,7 @@ from jen import *
 
 
 gb.init("initial.yml")
-gb.create_websocket_server(("0.0.0.0", 7985))
+gb.start_gateway(WebsocketServer("0.0.0.0", 7985))
 
 try:
     while True:

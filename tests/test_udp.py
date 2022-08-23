@@ -11,11 +11,9 @@ def udp_thread(params: tuple[WorkerController, int] ):
     worker, i = params
     worker.init()
 
-    # client = gb.connect_server(("127.0.0.1", 7984))
-    client = UDPClient(("127.0.0.1", 7984))
+    client = UDPClient("127.0.0.1", 7984)
     client.watching = set(["value_udp"])
-    client.start()
-    gb.gateways.append(client)
+    gb.start_gateway(client)
 
     ans = None
 
@@ -40,7 +38,7 @@ def udp_thread(params: tuple[WorkerController, int] ):
 def udp_thread2(worker: WorkerController, i: list):
     worker.init()
 
-    server = gb.create_server(("127.0.0.1", 7984))
+    server = gb.start_gateway(UDPServer("127.0.0.1", 7984))
     time.sleep(1)
     gb.write("value_udp2", i)
     time.sleep(0.1)
@@ -53,7 +51,7 @@ def udp_main(pool_size: int, attempts: int):
     the_pool = Pool(pool_size)
     expected = list([random.randint(0, 1000) for _ in range(attempts)])
 
-    gb.create_server(("127.0.0.1", 7984))
+    gb.start_gateway(UDPServer("127.0.0.1", 7984))
     gb.write("value_udp", expected)
     
     with the_pool as p:
@@ -78,17 +76,20 @@ def test_udp_multi_processes():
 
 
 def test_udp_start_stop_and_error_handling():
-    server = gb.create_server(("127.0.0.1", 7984))
+    server = gb.start_gateway(UDPServer("127.0.0.1", 7984))
 
     # useless
     server.start()
+    time.sleep(0.1)
+    so = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    so.sendto(b'\x00', ("127.0.0.1", 7984))
     time.sleep(0.1)
     server.stop()
     time.sleep(0.1)
 
     old_val = consts.CONNECTION_TIMEOUT
     consts.CONNECTION_TIMEOUT = 0.5
-    client = gb.connect_server(("127.0.0.1", 7984))
+    client = gb.start_gateway(UDPClient("127.0.0.1", 7984))
 
     # useless
     client.start()
@@ -105,10 +106,9 @@ def test_udp_start_stop_and_error_handling():
 def test_udp_client_process():
     expected = list([random.randint(0, 1000) for _ in range(100)])
 
-    client = UDPClient(("127.0.0.1", 7984))
+    client = UDPClient("127.0.0.1", 7984)
     client.watching = set(["value_udp2"])
-    client.start()
-    gb.gateways.append(client)
+    gb.start_gateway(client)
 
     p = Process(target=udp_thread2, args=(WorkerController("0", gb.share), expected))
     p.start()
@@ -132,5 +132,3 @@ def test_udp_client_process():
 
     print(actual)
     assert expected == actual
-
-test_udp_start_stop_and_error_handling()

@@ -27,12 +27,12 @@ class UDPConnection(UpstreamRole):
 
 class UDPServer(ServerLikeRole, Gateway):
 
-    def __init__(self, addr: Address):
+    def __init__(self, ip: str, port: int):
         ServerLikeRole.__init__(self)
         Gateway.__init__(self)
 
         self.s: socket.socket = None
-        self.server_addr: Address = addr
+        self.server_addr: Address = (ip, port)
 
         self.connections: dict[Address, UDPConnection] = {}
 
@@ -79,13 +79,13 @@ class UDPServer(ServerLikeRole, Gateway):
 
 class UDPClient(DownstreamRole, Gateway):
 
-    def __init__(self, addr: Address):
+    def __init__(self, ip: str, port: int):
         DownstreamRole.__init__(self)
         Gateway.__init__(self)
 
         self.s: socket.socket = None
 
-        self.server_addr = addr
+        self.server_addr = (ip, port)
 
     def write(self, packet: Packet):
         self.s.sendto(packet.data, self.server_addr)
