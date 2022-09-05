@@ -3,11 +3,26 @@
 #define PACKETIZER_USE_INDEX_AS_DEFAULT
 #define PACKETIZER_USE_CRC_AS_DEFAULT
 
+#ifdef ESP32
+
+#define STL std
+#define STL_UINT8_VECTOR STL::vector<uint8_t>
+#define STL_STRING_VECTOR STL::vector<String>
+#define STL_STOI(x) std::stoi(x)
+// #define String std::string
+#define JSON_DOC_SIZE 1024
+
+#else
+
 #define STL arx
 #define STL_UINT8_VECTOR STL::vector<uint8_t, 128U>
 #define STL_STRING_VECTOR STL::vector<String, 128>
 #define STL_STOI(x) x.toInt()
 #define JSON_DOC_SIZE 1024
+
+#include <ArxContainer.h>
+
+#endif
 
 #define DECLARE_WATCHER(type, name, path, body) \
   void name(JsonVariant t) {                    \
@@ -31,7 +46,6 @@
   }
 
 #include <ArduinoJson.h>
-#include <ArxContainer.h>
 #include <Packetizer.h>
 
 #include "event_emitter.hpp"
@@ -142,6 +156,7 @@ class Globals {
     serializeMsgPack(data, &send[path_size], data_size);
 
     Packetizer::send(Serial, 3, send, path_size + data_size);
+    return true;
   }
 
   inline void update_watch() {
