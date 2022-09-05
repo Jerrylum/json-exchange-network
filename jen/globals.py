@@ -109,8 +109,6 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin] = N
     if "*" in path:
         raise KeyError("Wildcard not allowed in path")
 
-    nodes = path.split(".")
-
     old_val = read(path)
     if old_val == val:
         if (isinstance(old_val, list) or isinstance(old_val, dict)) and old_val is val:
@@ -128,7 +126,7 @@ def write(path: str, val: any, early_sync=True, origin: Optional[DiffOrigin] = N
         share = val
         logger.info("Global overwritten")
     else:
-        _write(share, nodes, val)
+        _write(share, path.split("."), val)
 
     # XXX: FIXING: race condition might occur
     with sync_condition:
