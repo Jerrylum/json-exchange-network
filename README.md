@@ -255,6 +255,7 @@ if watching paths set is updated:
 
 Used libraries in Arduino:
 ```
+CAN (by Sandeep Mistry)
 due_can (by Collin Kidder and more)
 Task Scheduler (by Kai Liebich & Georg Icking-Konert)
 MsgPack (by hideakitai)
