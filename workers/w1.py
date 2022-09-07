@@ -7,31 +7,31 @@ def run(worker: WorkerController):
     sm = worker.use_serial_manager()
     sm.whitelist.append(PortInfo(serial_number="5513132373735171A0B1", baudrate=115200))
     sm.whitelist.append(PortInfo(serial_number="7513131383235170F071", baudrate=115200))
+    sm.whitelist.append(PortInfo(serial_number="", baudrate=921600))
 
     gb.start_gateway(UDPBroadcast("255.255.255.255", 7986))
 
-    gen_output = gb.clone("rg.o")
-    shooter_output = gb.clone("rs.o")
+    drive = [False, 170, 40, 100, 0]
 
     while True:
-        if isBtnJustPressed(RIGHT_L):
-            gen_output[0] = not gen_output[0]
 
-        gen_output[1] = isBtnPressing(RIGHT_U)
-        gen_output[2] = isBtnPressing(RIGHT_R)
+        drive[0] = isBtnPressing("kb:i")
 
-        if isBtnJustPressed(RIGHT_D):
-            gen_output[3] = not gen_output[3]
+        elevator_delta = (isBtnPressing("kb:o") - isBtnPressing("kb:l"))
+        claw_x_delta = (isBtnPressing("kb:Right") - isBtnPressing("kb:Left"))
+        claw_y_delta = (isBtnPressing("kb:Up") - isBtnPressing("kb:Down"))
 
-        gb.write("rg.o", list(gen_output))
+        drive[1] = max(80, min(drive[1] + elevator_delta, 170))
+        drive[2] = max(0, min(drive[2] + claw_x_delta, 140))
+        drive[3] = max(0, min(drive[3] + claw_y_delta, 110))
+        drive[4] = -1000 if isBtnPressing("kb:f") else 0
 
-        shooter_output[0] = int(getAxis(LEFT_X) * 8192 * 19 * (45 / 360) * 7)
-        shooter_output[1] = int(-getAxis(LEFT_Y) * 8192 * 19 * (150 / 360))
+        # print(drive[1], drive[3])
 
-        gb.write("rs.o", list(shooter_output))
+        gb.write("drive", list(drive))
 
         # print("local", gen_output)
         # # print("e", time.perf_counter())
-        # print("feedback", gb.read("rs.f"))
+        print("feedback", gb.read("feedback"))
 
         worker.spin()
