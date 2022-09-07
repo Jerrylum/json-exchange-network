@@ -12,6 +12,7 @@ def run(worker: WorkerController):
     gb.start_gateway(UDPBroadcast("255.255.255.255", 7986))
 
     drive = [False, 170, 40, 100, 0]
+    catapult_trigger = True
 
     while True:
 
@@ -24,14 +25,14 @@ def run(worker: WorkerController):
         drive[1] = max(80, min(drive[1] + elevator_delta, 170))
         drive[2] = max(0, min(drive[2] + claw_x_delta, 140))
         drive[3] = max(0, min(drive[3] + claw_y_delta, 110))
-        drive[4] = -1000 if isBtnPressing("kb:f") else 0
 
-        # print(drive[1], drive[3])
+        if isBtnJustPressed("kb:f"):
+            catapult_trigger = not catapult_trigger
 
         gb.write("drive", list(drive))
+        gb.write("catapult_trigger", catapult_trigger)
 
-        # print("local", gen_output)
-        # # print("e", time.perf_counter())
+        # print(drive)
         print("feedback", gb.read("feedback"))
 
         worker.spin()

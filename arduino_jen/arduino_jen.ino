@@ -25,10 +25,10 @@ int claw_y_pos;
 
 #define GROUP1_MOTOR_COUNT 4
 RMM3508Motor group1_rm[GROUP1_MOTOR_COUNT] = {
-  RMM3508Motor(0, POS_PID_MODE),
-  RMM3508Motor(1, POS_PID_MODE),
-  RMM3508Motor(2, POS_PID_MODE),
-  RMM3508Motor(3, DIRECT_OUTPUT_MODE)
+  RMM3508Motor(0, DIRECT_OUTPUT_MODE),
+  RMM3508Motor(1, DIRECT_OUTPUT_MODE),
+  RMM3508Motor(2, DIRECT_OUTPUT_MODE),
+  RMM3508Motor(3, POS_PID_MODE)
 };
 
 unsigned char can_tx[8] = {0};
@@ -48,10 +48,13 @@ void drive_update_callback(JsonVariant var) {
   elevator.write(value[1].as<int>());
   claw_x.write(value[2].as<int>());
   claw_y.write(value[3].as<int>());
-  group1_rm[3].output = value[4].as<int>();
 
   static int count = 0;
   console << count++ << "\n";
+}
+
+void catapult_trigger_callback(JsonVariant var) {
+  group1_rm[3].target_tick -= 8192 * 19;
 }
 
 void can_callback(int packetSize) {
@@ -82,6 +85,7 @@ void setup() {
   claw_y.write(100);
 
   gb.watch("drive", drive_update_callback);
+  gb.watch("catapult_trigger", catapult_trigger_callback);
 
   gb.setup(921600);
 
