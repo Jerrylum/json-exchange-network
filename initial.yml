@@ -1,0 +1,59 @@
+%YAML 1.2
+---
+
+# This is the initial state and overview of the network.
+# All keys must be ASCII strings and must not start with an underscore.
+
+opcontrol:
+  joystick:
+    available: false
+    update: -1 # last update timestamp
+    axes: {
+      # (symbol name): float
+    }
+    btns: {
+      # (symbol name): boolean
+    }
+  keyboard:
+    keys: {} # Following https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/key-names.html
+
+process:
+  main:
+    pid: -1
+    update: -1 # last update timestamp of the process channel data
+  subprocess: {
+    # (worker name):
+    #   is_alive: boolean
+    #   pid: int
+  }
+
+drive: [False, 170, 40, 100, 0]
+
+catapult_trigger: 0 # 0 = not defined, 1/-1 = next cycle, 2 = slow moving
+
+setting:
+  catapult:
+    pos_pid:
+      max: 3000
+      min: -3000
+      p: 0.01
+      d: 0.6
+      i: 0.0
+    speed_pid:
+      max: 2000
+      min: -2000
+      p: 2
+      d: 0
+      i: 0.01
+
+
+conn: {
+  # (name):
+  #   available: boolean
+  #   [display_name]: str
+  #   watch:
+  #   - uuid: str
+  #     path: str
+}
+    
+stop: False

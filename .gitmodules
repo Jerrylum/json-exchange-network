@@ -1,0 +1,3 @@
+[submodule "arduino_jen"]
+	path = arduino_jen
+	url = https://github.com/Jerrylum/arduino-jen

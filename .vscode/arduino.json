@@ -1,0 +1,6 @@
+{
+    "port": "/dev/ttyUSB0",
+    "board": "esp32:esp32:esp32",
+    "sketch": "arduino_jen/arduino_jen.ino",
+    "output": "build/arduino_jen"
+}
