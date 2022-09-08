@@ -3,7 +3,7 @@ from typing import Union, Callable
 import time
 
 import jen.globals as gb
-from .consts import *
+import jen.consts as consts
 
 
 ButtonSymbol = Union[str, Callable[[any], bool]]
@@ -17,10 +17,10 @@ class BtnStatus:
 
 
 btn_table: dict[ButtonSymbol, BtnStatus] = {s: BtnStatus() for s in [
-    LEFT_U, LEFT_R, LEFT_D, LEFT_L,
-    RIGHT_U, RIGHT_R, RIGHT_D, RIGHT_L,
-    LB, LT, RB, RT,
-    SELECT_BTN, START_BTN, MODE_BTN, LEFT_THUMB, RIGHT_THUMB
+    "LEFT_U","LEFT_R","LEFT_D","LEFT_L",
+    "RIGHT_U","RIGHT_R","RIGHT_D","RIGHT_L",
+    "LB","LT","RB","RT",
+    "SELECT_BTN","START_BTN","MODE_BTN","LEFT_THUMB","RIGHT_THUMB"
 ]}
 
 last_opcontrol_timestamp = 0
@@ -34,7 +34,7 @@ def opcontrolLoop(prepareSymbol: ButtonSymbol = None):
     if prepareSymbol is not None and prepareSymbol not in btn_table:
         btn_table[prepareSymbol] = BtnStatus()
 
-    if time.perf_counter() - last_opcontrol_timestamp < OPCONTROL_SPIN_MINIMUM_INTERVAL:
+    if time.perf_counter() - last_opcontrol_timestamp < consts.OPCONTROL_SPIN_MINIMUM_INTERVAL:
         return
 
     last_opcontrol_data = dict(gb.read("opcontrol"))  # IMPORTANT: use dict to make a shallow copy

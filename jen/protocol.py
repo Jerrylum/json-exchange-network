@@ -1,10 +1,11 @@
-from typing import Union, Callable, Optional, Tuple, cast
+from typing import Callable, Optional, Tuple, Union, cast
+from types import ModuleType
 
 import crc8
 import msgpack
 import marshal
 from cobs import cobs
-from .tools import * 
+from .tools import *
 
 PkgIdxType = Union[int, bytes]
 
@@ -181,4 +182,3 @@ class PacketOrigin:
 
     def write(self, packet: Packet):
         pass
-

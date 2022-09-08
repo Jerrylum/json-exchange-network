@@ -1,3 +1,12 @@
+"""
+DO NOT AUTO-FORMAT THIS FILE
+DO NOT AUTO-FORMAT THIS FILE
+DO NOT AUTO-FORMAT THIS FILE
+"""
+
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+
 import platform
 import pygame
 
@@ -42,8 +51,8 @@ def run(worker: WorkerController):
 
             if pygame.joystick.get_count() > 1:
                 logger.warning("More than one joystick connected, using the first one")
-            
-            logger.info("Listening joystick: %s - %s" % (joystick.get_guid() ,name))
+
+            logger.info("Listening joystick: %s - %s" % (joystick.get_guid(), name))
 
             while pygame.joystick.get_count() != 0:
                 pygame.event.wait(consts.JOYSTICK_UPDATE_MAXIMUM_INTERVAL * 1000)

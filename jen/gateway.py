@@ -194,7 +194,7 @@ class WorkerController:
 
         logger.name = self.display_name
 
-        logger.info("Worker started %s" % os.getpid())
+        logger.info("Worker started on process %s" % os.getpid())
 
     def use_clock(self, frequency: int, busy_wait=False, offset=0.0004):
         self.clock = Clock(frequency, busy_wait, offset)

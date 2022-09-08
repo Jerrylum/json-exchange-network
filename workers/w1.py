@@ -7,7 +7,7 @@ def run(worker: WorkerController):
     sm = worker.use_serial_manager()
     sm.whitelist.append(PortInfo(serial_number="5513132373735171A0B1", baudrate=115200))
     sm.whitelist.append(PortInfo(serial_number="7513131383235170F071", baudrate=115200))
-    sm.whitelist.append(PortInfo(serial_number="548B008981", baudrate=921600))
+    sm.whitelist.append(PortInfo(serial_number="0001", baudrate=921600))
 
     gb.start_gateway(UDPBroadcast("255.255.255.255", 7986))
 
@@ -39,6 +39,6 @@ def run(worker: WorkerController):
         gb.write("catapult_trigger", catapult_trigger)
 
         # print(drive)
-        print("feedback", gb.read("feedback"))
+        # print("feedback", gb.read("feedback"))
 
         worker.spin()
