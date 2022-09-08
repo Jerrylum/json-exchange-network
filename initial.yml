@@ -27,42 +27,25 @@ process:
     #   pid: int
   }
 
-rs: # robot_shooter
-  s: # setting
-    sx: # shooter x
-      pid:
-        max: 2000
-        min: -2000
-        p: 0.35
-        d: 180
-        i: 0
-    sy: # shooter y
-      pid:
-        max: 4000
-        min: -4000
-        p: 0.35
-        d: 180
-        i: 0
-  o: # output
-  - 0 # shooter x target_pos
-  - 0 # shooter x target_pos
-  f: # feedback
-  - 0 # shooter x now_pos
-  - 0 # shooter x now_speed
-  - 0 # shooter x output_speed
-  - 0 # shooter y now_pos
-  - 0 # shooter y now_speed
-  - 0 # shooter y output_speed
+drive: [False, 170, 40, 100, 0]
 
-rg: # robot_general
-  o:
-  - false # BLDC
-  - false # elevator
-  - false # pusher
-  - false # platform
-  f:
-  - 0 # sensor1
-  - 0 # sensor2
+catapult_trigger: 0 # 0 = not defined, 1/-1 = next cycle, 2 = slow moving
+
+setting:
+  catapult:
+    pos_pid:
+      max: 3000
+      min: -3000
+      p: 0.02
+      d: 1
+      i: 0.0
+    speed_pid:
+      max: 2000
+      min: -2000
+      p: 2
+      d: 0
+      i: 0
+
 
 conn: {
   # (name):

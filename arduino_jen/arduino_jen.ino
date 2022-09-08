@@ -39,6 +39,28 @@ unsigned char can_tx[8] = {0};
   xTaskCreatePinnedToCore(name, #name, 10000, NULL, 1, &name##_handle, 0);
 
 
+void setting_update_callback(JsonVariant var) {
+  JsonObject value = var.as<JsonObject>();
+
+  JsonVariant c_pos_pid_from = value["catapult"]["pos_pid"];
+  JsonVariant c_speed_pid_from = value["catapult"]["speed_pid"];
+
+  PIDImpl* c_pos_pid_to = group1_rm[3].pos_pid;
+  c_pos_pid_to->_max_val = c_pos_pid_from["max"] | 0.0;
+  c_pos_pid_to->_min_val = c_pos_pid_from["min"] | 0.0;
+  c_pos_pid_to->_Kp = c_pos_pid_from["p"] | 0.0;
+  c_pos_pid_to->_Kd = c_pos_pid_from["d"] | 0.0;
+  c_pos_pid_to->_Ki = c_pos_pid_from["i"] | 0.0;
+
+  PIDImpl* c_speed_pid_to = group1_rm[3].speed_pid;
+  c_speed_pid_to->_max_val = c_speed_pid_from["max"] | 0.0;
+  c_speed_pid_to->_min_val = c_speed_pid_from["min"] | 0.0;
+  c_speed_pid_to->_Kp = c_speed_pid_from["p"] | 0.0;
+  c_speed_pid_to->_Kd = c_speed_pid_from["d"] | 0.0;
+  c_speed_pid_to->_Ki = c_speed_pid_from["i"] | 0.0;
+}
+
+
 void drive_update_callback(JsonVariant var) {
   JsonArray value = var.as<JsonArray>();
 
@@ -54,7 +76,22 @@ void drive_update_callback(JsonVariant var) {
 }
 
 void catapult_trigger_callback(JsonVariant var) {
-  group1_rm[3].target_tick -= 8192 * 19;
+  int flag = var.as<int>();
+  
+  if (flag == 1 || flag == -1) {
+    if (group1_rm[3].output_mode != POS_PID_MODE) {
+      group1_rm[3].target_tick = group1_rm[3].unbound_tick;
+    } else {
+      group1_rm[3].target_tick -= 8192 * 19;
+    }
+    group1_rm[3].output_mode = POS_PID_MODE;
+  } else if (flag == 2) {
+    group1_rm[3].target_speed = -1000;
+    group1_rm[3].output_mode = SPEED_PID_MODE;
+  } else {
+    group1_rm[3].output = 0;
+    group1_rm[3].output_mode = DIRECT_OUTPUT_MODE;
+  }
 }
 
 void can_callback(int packetSize) {
@@ -84,6 +121,7 @@ void setup() {
   claw_y.attach(CLAW_Y, 500, 2500);
   claw_y.write(100);
 
+  gb.watch("setting", setting_update_callback);
   gb.watch("drive", drive_update_callback);
   gb.watch("catapult_trigger", catapult_trigger_callback);
 
@@ -108,9 +146,13 @@ void sensor_feedback_task(void * pvParameters) {
     //   feedback[i * 3 + 2] = group1_rm[i].output;
     // }
 
-    for (int i = 0; i < GROUP1_MOTOR_COUNT; i++) {
-      feedback[i] = group1_rm[i].unbound_tick;
-    }
+    feedback[0] = group1_rm[3].unbound_tick;
+    feedback[1] = group1_rm[3].speed;
+    feedback[2] = group1_rm[3].output;
+
+    // for (int i = 0; i < GROUP1_MOTOR_COUNT; i++) {
+    //   feedback[i] = group1_rm[i].unbound_tick;
+    // }
 
     gb.write("feedback", feedback);
     

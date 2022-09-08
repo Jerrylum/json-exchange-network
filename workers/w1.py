@@ -7,12 +7,12 @@ def run(worker: WorkerController):
     sm = worker.use_serial_manager()
     sm.whitelist.append(PortInfo(serial_number="5513132373735171A0B1", baudrate=115200))
     sm.whitelist.append(PortInfo(serial_number="7513131383235170F071", baudrate=115200))
-    sm.whitelist.append(PortInfo(serial_number="", baudrate=921600))
+    sm.whitelist.append(PortInfo(serial_number="548B008981", baudrate=921600))
 
     gb.start_gateway(UDPBroadcast("255.255.255.255", 7986))
 
-    drive = [False, 170, 40, 100, 0]
-    catapult_trigger = True
+    drive = gb.clone("drive")
+    catapult_trigger = 0
 
     while True:
 
@@ -26,8 +26,14 @@ def run(worker: WorkerController):
         drive[2] = max(0, min(drive[2] + claw_x_delta, 140))
         drive[3] = max(0, min(drive[3] + claw_y_delta, 110))
 
+        if isBtnJustPressed("kb:g"):
+            catapult_trigger = 2
+        if isBtnJustReleased("kb:g"):
+            catapult_trigger = 1
         if isBtnJustPressed("kb:f"):
-            catapult_trigger = not catapult_trigger
+            if catapult_trigger != 1 and catapult_trigger != -1:
+                catapult_trigger = 1
+            catapult_trigger *= -1
 
         gb.write("drive", list(drive))
         gb.write("catapult_trigger", catapult_trigger)
