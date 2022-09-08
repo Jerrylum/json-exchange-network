@@ -28,7 +28,7 @@ RMM3508Motor group1_rm[GROUP1_MOTOR_COUNT] = {
   RMM3508Motor(0, DIRECT_OUTPUT_MODE),
   RMM3508Motor(1, DIRECT_OUTPUT_MODE),
   RMM3508Motor(2, DIRECT_OUTPUT_MODE),
-  RMM3508Motor(3, POS_PID_MODE)
+  RMM3508Motor(3, POS_TO_SPEED_PID_MODE)
 };
 
 CAN_FRAME can_tx;
@@ -42,22 +42,8 @@ CAN_FRAME can_tx;
 void setting_update_callback(JsonVariant var) {
   JsonObject value = var.as<JsonObject>();
 
-  JsonVariant c_pos_pid_from = value["catapult"]["pos_pid"];
-  JsonVariant c_speed_pid_from = value["catapult"]["speed_pid"];
-
-  PIDImpl* c_pos_pid_to = group1_rm[3].pos_pid;
-  c_pos_pid_to->_max_val = c_pos_pid_from["max"] | 0.0;
-  c_pos_pid_to->_min_val = c_pos_pid_from["min"] | 0.0;
-  c_pos_pid_to->_Kp = c_pos_pid_from["p"] | 0.0;
-  c_pos_pid_to->_Kd = c_pos_pid_from["d"] | 0.0;
-  c_pos_pid_to->_Ki = c_pos_pid_from["i"] | 0.0;
-
-  PIDImpl* c_speed_pid_to = group1_rm[3].speed_pid;
-  c_speed_pid_to->_max_val = c_speed_pid_from["max"] | 0.0;
-  c_speed_pid_to->_min_val = c_speed_pid_from["min"] | 0.0;
-  c_speed_pid_to->_Kp = c_speed_pid_from["p"] | 0.0;
-  c_speed_pid_to->_Kd = c_speed_pid_from["d"] | 0.0;
-  c_speed_pid_to->_Ki = c_speed_pid_from["i"] | 0.0;
+  group1_rm[3].set_pos_pid(value["catapult"]["pos_pid"]);
+  group1_rm[3].set_speed_pid(value["catapult"]["speed_pid"]);
 }
 
 
@@ -88,6 +74,8 @@ void catapult_trigger_callback(JsonVariant var) {
     group1_rm[3].output_mode = POS_PID_MODE;
   } else if (flag == 2) {
     group1_rm[3].target_speed = -1000;
+    group1_rm[3].speed_pid->_integral = 0;
+    group1_rm[3].speed_pid->_pre_error = 0;
     group1_rm[3].output_mode = SPEED_PID_MODE;
   } else {
     group1_rm[3].output = 0;

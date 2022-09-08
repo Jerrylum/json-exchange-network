@@ -36,15 +36,15 @@ setting:
     pos_pid:
       max: 3000
       min: -3000
-      p: 0.02
-      d: 1
+      p: 0.01
+      d: 0.6
       i: 0.0
     speed_pid:
       max: 2000
       min: -2000
       p: 2
       d: 0
-      i: 0
+      i: 0.01
 
 
 conn: {
