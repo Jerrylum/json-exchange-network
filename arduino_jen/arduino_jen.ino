@@ -1,4 +1,4 @@
-#include <CAN.h>
+#include <esp32_can.h>
 #include <ESP32Servo.h>
 
 #define INO_FILE
@@ -31,7 +31,7 @@ RMM3508Motor group1_rm[GROUP1_MOTOR_COUNT] = {
   RMM3508Motor(3, POS_PID_MODE)
 };
 
-unsigned char can_tx[8] = {0};
+CAN_FRAME can_tx;
 
 // Task function, Task name, Stack size (bytes), Task parameter, Priority, Task handle, Core ID
 #define CREATE_ESP32_TASK(name) \
@@ -81,8 +81,9 @@ void catapult_trigger_callback(JsonVariant var) {
   if (flag == 1 || flag == -1) {
     if (group1_rm[3].output_mode != POS_PID_MODE) {
       group1_rm[3].target_tick = group1_rm[3].unbound_tick;
+      // group1_rm[3].target_tick = 0;
     } else {
-      group1_rm[3].target_tick -= 8192 * 19;
+      group1_rm[3].target_tick -= 8192 * (3591/187.0);
     }
     group1_rm[3].output_mode = POS_PID_MODE;
   } else if (flag == 2) {
@@ -94,18 +95,9 @@ void catapult_trigger_callback(JsonVariant var) {
   }
 }
 
-void can_callback(int packetSize) {
-  if (packetSize) {
-    int rx_id = CAN.packetId();
-    unsigned char can_rx[8];
-
-    for (int j = 0; j < 8; j++){
-      can_rx[j] = CAN.read();
-    }
-
-    for (int i = 0; i < GROUP1_MOTOR_COUNT; i++) {
-      if (group1_rm[i].handle_packet(rx_id, can_rx)) break;
-    }
+void can_callback(CAN_FRAME *frame) {
+  for (int i = 0; i < GROUP1_MOTOR_COUNT; i++) {
+    if (group1_rm[i].handle_packet(frame->id, frame->data.byte)) break;
   }
 }
 
@@ -127,10 +119,9 @@ void setup() {
 
   gb.setup(921600);
 
-  CAN.onReceive(can_callback);
-  if (!CAN.begin(1000E3)) {
-    console << "CAN init failed\n";
-  }
+  CAN0.begin(1000000);
+  CAN0.watchFor();
+  CAN0.setCallback(0, can_callback);
 
   CREATE_ESP32_TASK(sensor_feedback_task);
   CREATE_ESP32_TASK(gb_loop_task);
@@ -168,16 +159,16 @@ void gb_loop_task(void * pvParameters) {
 }
 
 void loop() {
-  CAN.beginPacket(0x200);
+  can_tx.id = 0x200;
+  can_tx.length = 8;
 
   for (int i = 0; i < GROUP1_MOTOR_COUNT; i++) {
     short output = group1_rm[i].get_output();
-    can_tx[i * 2] = output >> 8;
-    can_tx[i * 2 + 1] = output;
+    can_tx.data.byte[i * 2] = output >> 8;
+    can_tx.data.byte[i * 2 + 1] = output;
   }
-
-  CAN.write(can_tx, 8);
-  CAN.endPacket();
+  
+  CAN0.sendFrame(can_tx);
 
   delay(5);
 }
